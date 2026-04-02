@@ -191,10 +191,15 @@ input[type=file]{display:none}
       <div class="s-sec">
         <div class="s-title">Import</div>
         <input type="file" id="fileInput" accept=".srt,.txt,.csv">
-        <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="margin-bottom:8px">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
-          Open file
-        </button>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="flex:1">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+            Open file
+          </button>
+          <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear everything" style="flex:0 0 auto;padding:7px 10px;color:var(--text3)" disabled>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
+          </button>
+        </div>
         <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
         <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
         <div style="margin-top:9px">
@@ -549,6 +554,7 @@ function parseContent(text, filename) {
   translations = {}; activeTab = 'source';
   $('translateBtn').disabled = !subtitles.length;
   $('exportBtn').disabled = true;
+  $('clearBtn').disabled = !subtitles.length;
   rebuildTabs(); renderCurrentView(); setStatus('');
 }
 
@@ -1041,6 +1047,22 @@ function exportFile() {
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${slug}.${fmt}`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setStatus('Exported ✓','ok');
+}
+
+// Clear all
+function clearAll() {
+  subtitles = [];
+  translations = {};
+  activeTab = 'source';
+  $('pasteArea').value = '';
+  $('fileInput').value = '';
+  $('translateBtn').disabled = true;
+  $('exportBtn').disabled = true;
+  $('clearBtn').disabled = true;
+  $('progressFill').style.width = '0%';
+  setStatus('');
+  rebuildTabs();
+  renderCurrentView();
 }
 
 // Init
