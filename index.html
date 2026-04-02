@@ -32,6 +32,14 @@ body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:1
 .api-input:focus{border-color:var(--accent)}
 .api-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
 .api-dot.ok{background:var(--green)}
+.provider-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+.pvdr-btn{padding:7px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--mono);color:var(--text2);cursor:pointer;text-align:center;transition:all .15s;line-height:1.3}
+.pvdr-btn:hover{border-color:var(--border2);color:var(--text)}
+.pvdr-btn.active{background:var(--accent-dim);border-color:var(--accent);color:#8ba8ff}
+.pvdr-btn .pvdr-name{font-weight:500;font-size:11px;display:block}
+.pvdr-btn .pvdr-rpm{font-size:10px;color:var(--text3);display:block;margin-top:1px}
+.pvdr-btn.active .pvdr-rpm{color:#5b7cf6}
+.model-select-wrap{margin-top:6px}
 .main{display:flex;flex:1;overflow:hidden}
 
 /* Sidebar */
@@ -154,8 +162,8 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="logo">sub<span>.</span>translate</div>
     <div class="api-row">
-      <span class="api-label">Gemini API key</span>
-      <input class="api-input" type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+      <span class="api-label" id="apiLabel">API key</span>
+      <input class="api-input" type="password" id="apiKey" placeholder="…" autocomplete="off">
       <div class="api-dot" id="apiDot"></div>
     </div>
   </div>
@@ -229,6 +237,31 @@ input[type=file]{display:none}
       </div>
 
       <div class="s-sec">
+        <div class="s-title">Provider</div>
+        <div class="provider-grid">
+          <div class="pvdr-btn active" id="pvdr-gemini" onclick="setProvider('gemini')">
+            <span class="pvdr-name">Gemini</span>
+            <span class="pvdr-rpm">15 RPM · 1K/day</span>
+          </div>
+          <div class="pvdr-btn" id="pvdr-groq" onclick="setProvider('groq')">
+            <span class="pvdr-name">Groq</span>
+            <span class="pvdr-rpm">30 RPM · 14K/day</span>
+          </div>
+          <div class="pvdr-btn" id="pvdr-openrouter" onclick="setProvider('openrouter')">
+            <span class="pvdr-name">OpenRouter</span>
+            <span class="pvdr-rpm">free models</span>
+          </div>
+          <div class="pvdr-btn" id="pvdr-mistral" onclick="setProvider('mistral')">
+            <span class="pvdr-name">Mistral</span>
+            <span class="pvdr-rpm">1 RPM · free</span>
+          </div>
+        </div>
+        <div class="model-select-wrap">
+          <select class="select" id="modelSelect" style="font-size:11px"></select>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3);line-height:1.6" id="providerHint"></div>
+      </div>
+      <div class="s-sec">
         <div class="s-title">Translate</div>
         <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         <button class="btn btn-primary" id="translateBtn" onclick="startTranslation()" disabled>
@@ -286,10 +319,99 @@ const LANG_CODES = {
 };
 
 // API key
+// ── Providers config ──
+const PROVIDERS = {
+  gemini: {
+    label: 'Gemini API key',
+    placeholder: 'AIza...',
+    hint: 'Get key: aistudio.google.com — No credit card needed',
+    validate: v => v.startsWith('AIza') && v.length > 20,
+    models: [
+      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite  ·  15 RPM / 1K/day' },
+      { id: 'gemini-2.5-flash',      name: 'Gemini 2.5 Flash       ·  10 RPM / 250/day' },
+    ]
+  },
+  groq: {
+    label: 'Groq API key',
+    placeholder: 'gsk_...',
+    hint: 'Get key: console.groq.com — No credit card needed',
+    validate: v => v.startsWith('gsk_') && v.length > 20,
+    models: [
+      { id: 'llama-3.1-8b-instant',    name: 'Llama 3.1 8B Instant  ·  30 RPM / 14.4K/day' },
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B         ·  30 RPM / 1K/day' },
+      { id: 'llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B     ·  30 RPM' },
+      { id: 'qwen-qwq-32b',            name: 'Qwen QwQ 32B          ·  30 RPM' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 70B       ·  30 RPM' },
+      { id: 'gemma2-9b-it',            name: 'Gemma 2 9B            ·  30 RPM' },
+    ]
+  },
+  openrouter: {
+    label: 'OpenRouter API key',
+    placeholder: 'sk-or-...',
+    hint: 'Get key: openrouter.ai — Free models available',
+    validate: v => v.startsWith('sk-or-') && v.length > 20,
+    models: [
+      { id: 'meta-llama/llama-3.3-70b-instruct:free',  name: 'Llama 3.3 70B (free)' },
+      { id: 'meta-llama/llama-4-maverick:free',         name: 'Llama 4 Maverick (free)' },
+      { id: 'google/gemma-3-27b-it:free',               name: 'Gemma 3 27B (free)' },
+      { id: 'mistralai/mistral-7b-instruct:free',       name: 'Mistral 7B (free)' },
+      { id: 'deepseek/deepseek-r1:free',                name: 'DeepSeek R1 (free)' },
+      { id: 'qwen/qwq-32b:free',                        name: 'QwQ 32B (free)' },
+      { id: 'microsoft/phi-4:free',                     name: 'Phi-4 (free)' },
+    ]
+  },
+  mistral: {
+    label: 'Mistral API key',
+    placeholder: '...',
+    hint: 'Get key: console.mistral.ai — Free tier: 1 RPM',
+    validate: v => v.length > 20,
+    models: [
+      { id: 'mistral-small-latest', name: 'Mistral Small  ·  1 RPM free' },
+      { id: 'open-mistral-7b',      name: 'Mistral 7B     ·  1 RPM free' },
+    ]
+  },
+};
+
+let activeProvider = 'gemini';
+
+function setProvider(id) {
+  activeProvider = id;
+  Object.keys(PROVIDERS).forEach(k => {
+    const btn = $('pvdr-'+k);
+    if (btn) btn.className = 'pvdr-btn' + (k === id ? ' active' : '');
+  });
+  const cfg = PROVIDERS[id];
+  $('apiLabel').textContent = cfg.label;
+  $('apiKey').placeholder = cfg.placeholder;
+  $('apiKey').value = '';
+  $('apiDot').className = 'api-dot';
+  $('providerHint').textContent = cfg.hint;
+  // Populate model select
+  const sel = $('modelSelect');
+  sel.innerHTML = '';
+  cfg.models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.textContent = m.name;
+    sel.appendChild(opt);
+  });
+  // Adjust batch/pause per provider
+  updateProviderTiming();
+}
+
+function updateProviderTiming() {
+  // stored globally, used in startTranslation
+  window._providerBatch = activeProvider === 'mistral' ? 10 : 30;
+  window._providerPause = activeProvider === 'mistral' ? 65000 : (activeProvider === 'gemini' ? 10000 : 5000);
+}
+
 $('apiKey').addEventListener('input', () => {
   const v = $('apiKey').value.trim();
-  $('apiDot').className = 'api-dot' + (v.startsWith('AIza') && v.length > 20 ? ' ok' : '');
+  const valid = PROVIDERS[activeProvider]?.validate(v) ?? (v.length > 20);
+  $('apiDot').className = 'api-dot' + (valid ? ' ok' : '');
 });
+
+// Init provider UI
+setProvider('gemini');
 
 // Output mode
 function setOutput(mode) {
@@ -654,6 +776,59 @@ function msToTc(ms) {
 function pad(n){return String(n).padStart(2,'0');}
 function midTimecode(start,end){return msToTc(Math.round((tcToMs(start)+tcToMs(end))/2));}
 
+// ── Unified provider call ──
+async function callProvider(prompt, key, retries=3) {
+  const model = $('modelSelect').value;
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  for (let attempt=0; attempt<retries; attempt++) {
+    try {
+      let rawText;
+      if (activeProvider === 'gemini') {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          { method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096}}) }
+        );
+        const data = await resp.json();
+        if (data.error) {
+          const is429 = data.error.code===429||(data.error.message||'').includes('quota');
+          const err = new Error(data.error.message); err.is429=is429; throw err;
+        }
+        rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      } else {
+        const baseURLs = {
+          groq:       'https://api.groq.com/openai/v1/chat/completions',
+          openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+          mistral:    'https://api.mistral.ai/v1/chat/completions',
+        };
+        const resp = await fetch(baseURLs[activeProvider], {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+          body:JSON.stringify({model, temperature:0.3, max_tokens:4096,
+            messages:[{role:'user',content:prompt}]})
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) {
+          const msg = data?.error?.message || `HTTP ${resp.status}`;
+          const err = new Error(msg); err.is429 = resp.status===429; throw err;
+        }
+        rawText = data?.choices?.[0]?.message?.content || '[]';
+      }
+      return rawText;
+    } catch(e) {
+      if (e.is429 && attempt<retries-1) {
+        const w = 30000*(attempt+1);
+        for (let c=Math.round(w/1000); c>0; c--) {
+          setStatus(`Rate limit — retry in ${c}s… (${attempt+1}/${retries})`);
+          await sleep(1000);
+        }
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 // Translation
 async function startTranslation() {
   const key = $('apiKey').value.trim();
@@ -669,29 +844,13 @@ async function startTranslation() {
 
   const snap = [...subtitles];
   const result = [];
-  const BATCH = 30;
+  const BATCH = window._providerBatch || 30;
+  const PAUSE = window._providerPause || 10000;
   const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-  const callGemini = async (prompt, retries=3) => {
-    for (let attempt=0; attempt<retries; attempt++) {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096}}) }
-      );
-      const data = await resp.json();
-      if (data.error) {
-        const is429 = data.error.code===429 || (data.error.message||'').includes('quota');
-        if (is429 && attempt<retries-1) { const w=30000*(attempt+1); setStatus(`Rate limit — waiting ${w/1000}s… (retry ${attempt+1}/${retries})`); await sleep(w); continue; }
-        throw new Error(data.error.message);
-      }
-      return data;
-    }
-  };
 
   for (let i=0; i<snap.length; i+=BATCH) {
     if (i>0) {
-      for (let c=10; c>0; c--) {
+      for (let c=Math.round(PAUSE/1000); c>0; c--) {
         setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);
         await sleep(1000);
       }
@@ -706,8 +865,7 @@ async function startTranslation() {
       `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))
     ].join('\n');
     try {
-      const data = await callGemini(prompt);
-      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
+      const raw = await callProvider(prompt, key);
       let parsed; try { parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim()); } catch { parsed=batch.map(s=>s.text); }
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
       setStatus(`Translating… ${Math.min(i+BATCH,snap.length)}/${snap.length}`);
