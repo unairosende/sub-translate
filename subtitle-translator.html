@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sub.translate — Subtitle Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0e0f11;--bg1:#16181c;--bg2:#1e2026;--bg3:#262830;
+  --border:#2e3038;--border2:#3a3d48;
+  --text:#e2e4ea;--text2:#8b8fa8;--text3:#555a6e;
+  --accent:#5b7cf6;--accent2:#3d5bd9;--accent-dim:#1e2a5e;
+  --green:#3ecf7a;--green-dim:#1a3d2e;
+  --amber:#f0a430;--amber-dim:#3a2a10;
+  --red:#f05050;--red-dim:#3a1818;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:14px;display:flex;flex-direction:column}
+
+.app{display:flex;flex-direction:column;height:100vh}
+.topbar{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);letter-spacing:.04em}
+.logo span{color:var(--text3)}
+.topbar-spacer{flex:1}
+.api-row{display:flex;align-items:center;gap:8px}
+.api-label{font-size:12px;color:var(--text3)}
+.api-input{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:12px;color:var(--text);width:240px;outline:none}
+.api-input:focus{border-color:var(--accent)}
+.api-status{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+.api-status.ok{background:var(--green)}
+
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:230px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-section{padding:14px 12px 12px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:10px}
+.select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555a6e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.select:focus{border-color:var(--accent)}
+.radio-group{display:flex;flex-direction:column;gap:6px}
+.radio-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.radio-option:hover{background:var(--bg3)}
+.radio-option.active{background:var(--accent-dim);border-color:var(--accent)}
+.radio-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;position:relative;transition:border-color .15s}
+.radio-option.active .radio-dot{border-color:var(--accent)}
+.radio-option.active .radio-dot::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.radio-label{font-size:13px;color:var(--text2)}
+.radio-option.active .radio-label{color:var(--text)}
+.limit-info{margin-top:8px;padding:8px;background:var(--bg2);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.8}
+.limit-info b{color:var(--text2)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:6px;font-size:13px;font-family:var(--sans);font-weight:500;cursor:pointer;border:none;transition:all .15s;width:100%}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-green{background:var(--green-dim);color:var(--green);border:1px solid #2a7a50}
+.btn-green:hover{background:#1f4a35}
+.btn-green:disabled{opacity:.4;cursor:not-allowed}
+
+.lang-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.lang-chip{padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.lang-chip:hover{border-color:var(--accent);color:var(--text)}
+.lang-chip.active{background:var(--accent-dim);border-color:var(--accent);color:#8ba8ff}
+
+.progress-bar{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:8px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;width:0%}
+.status-msg{font-size:12px;margin-top:4px;color:var(--text3);min-height:16px}
+.status-msg.err{color:var(--red)}
+.status-msg.ok{color:var(--green)}
+
+textarea.file-paste{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:8px;resize:vertical;outline:none;min-height:72px;line-height:1.5}
+textarea.file-paste:focus{border-color:var(--accent)}
+textarea.file-paste::placeholder{color:var(--text3)}
+
+/* Center */
+.center{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{background:var(--bg1);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tab-btn{padding:5px 12px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:var(--sans);transition:all .15s}
+.tab-btn.active{background:var(--bg3);color:var(--text)}
+.tab-btn:hover:not(.active){color:var(--text2)}
+.toolbar-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.pill{padding:3px 8px;border-radius:12px;font-size:11px;font-family:var(--mono);font-weight:500}
+.pill-blue{background:var(--accent-dim);color:#8ba8ff}
+.pill-amber{background:var(--amber-dim);color:var(--amber)}
+.pill-red{background:var(--red-dim);color:var(--red)}
+.pill-green{background:var(--green-dim);color:var(--green)}
+
+.editor-area{flex:1;display:flex;overflow:hidden}
+.editor-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.editor-pane:last-child{border-right:none}
+.pane-header{padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);flex-shrink:0}
+.pane-title{font-weight:500;color:var(--text2);font-size:12px}
+.pane-scroll{flex:1;overflow-y:auto;padding:12px}
+.pane-scroll::-webkit-scrollbar{width:6px}
+.pane-scroll::-webkit-scrollbar-track{background:var(--bg1)}
+.pane-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* Cards */
+.subtitle-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;transition:border-color .15s}
+.subtitle-card:hover{border-color:var(--border2)}
+.subtitle-card.warn{border-color:#5a3800}
+.subtitle-card.error{border-color:#5a1a1a}
+.sub-index{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:3px}
+.sub-time{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px}
+.sub-text{font-size:13px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-all}
+.sub-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+.sub-chars{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.sub-chars.warn{color:var(--amber)}
+.sub-chars.error{color:var(--red)}
+.char-bar{flex:1;height:2px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.char-bar-fill{height:100%;border-radius:2px;background:var(--green);transition:width .3s}
+.char-bar-fill.warn{background:var(--amber)}
+.char-bar-fill.error{background:var(--red)}
+
+/* Drop zone */
+.drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;text-align:center;cursor:pointer;border:2px dashed var(--border2);border-radius:10px;margin:20px;transition:all .2s}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-dim)}
+.drop-icon{font-size:40px;opacity:.4;line-height:1}
+.drop-title{font-size:14px;font-weight:500;color:var(--text2)}
+.drop-sub{font-size:12px;color:var(--text3)}
+
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="logo">sub<span>.</span>translate</div>
+    <div class="topbar-spacer"></div>
+    <div class="api-row">
+      <span class="api-label">Gemini API key</span>
+      <input class="api-input" type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+      <div class="api-status" id="apiStatus" title="Enter a valid Gemini API key"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Import -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Import</div>
+        <input type="file" id="fileInput" accept=".srt,.txt,.csv">
+        <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="margin-bottom:8px">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+          Open file
+        </button>
+        <textarea class="file-paste" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="4"></textarea>
+        <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
+        <div style="margin-top:10px">
+          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:6px">Hint format</div>
+          <select class="select" id="importFormat">
+            <option value="auto">Auto-detect</option>
+            <option value="srt">SRT</option>
+            <option value="txt">TXT (one per line)</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Language -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Target language</div>
+        <select class="select" id="langSelect" onchange="syncChips()">
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+          <option value="German">German</option>
+          <option value="Italian">Italian</option>
+          <option value="Portuguese">Portuguese</option>
+          <option value="Dutch">Dutch</option>
+          <option value="Polish">Polish</option>
+          <option value="Russian">Russian</option>
+          <option value="Turkish">Turkish</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Japanese">Japanese</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+          <option value="Catalan">Catalan</option>
+        </select>
+        <div class="lang-chips">
+          <span class="lang-chip" onclick="setLang('Spanish')">ES</span>
+          <span class="lang-chip" onclick="setLang('French')">FR</span>
+          <span class="lang-chip" onclick="setLang('German')">DE</span>
+          <span class="lang-chip" onclick="setLang('Italian')">IT</span>
+          <span class="lang-chip" onclick="setLang('Catalan')">CA</span>
+          <span class="lang-chip" onclick="setLang('Japanese')">JA</span>
+          <span class="lang-chip" onclick="setLang('Korean')">KO</span>
+          <span class="lang-chip" onclick="setLang('Arabic')">AR</span>
+        </div>
+      </div>
+
+      <!-- Output type -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Output format</div>
+        <div class="radio-group">
+          <div class="radio-option active" id="opt-h" onclick="setOutput('horizontal')">
+            <div class="radio-dot"></div>
+            <span class="radio-label">Horizontal</span>
+          </div>
+          <div class="radio-option" id="opt-v" onclick="setOutput('vertical')">
+            <div class="radio-dot"></div>
+            <span class="radio-label">Vertical (split long lines)</span>
+          </div>
+        </div>
+        <div class="limit-info" id="limitInfo">
+          <b>Max chars/line:</b> 42<br>
+          <b>Max lines/sub:</b> 2<br>
+          <b>Auto-split:</b> off
+        </div>
+      </div>
+
+      <!-- Translate -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Translate</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <button class="btn btn-primary" id="translateBtn" onclick="startTranslation()" disabled>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
+          Translate
+        </button>
+        <div class="status-msg" id="statusMsg"></div>
+      </div>
+
+      <!-- Export -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Export</div>
+        <select class="select" id="exportFormat" style="margin-bottom:8px">
+          <option value="srt">SRT</option>
+          <option value="txt">TXT</option>
+          <option value="csv">CSV</option>
+        </select>
+        <button class="btn btn-green" id="exportBtn" onclick="exportFile()" disabled>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
+          Export
+        </button>
+      </div>
+
+    </div><!-- /sidebar -->
+
+    <!-- Center -->
+    <div class="center">
+      <div class="toolbar">
+        <button class="tab-btn active" id="tab-source" onclick="switchTab('source')">Source</button>
+        <button class="tab-btn" id="tab-translated" onclick="switchTab('translated')">Translated</button>
+        <div class="toolbar-sep"></div>
+        <span class="pill pill-blue" id="countPill">0 subs</span>
+        <span class="pill pill-amber" id="warnPill" style="display:none">0 warnings</span>
+        <span class="pill pill-red" id="errPill" style="display:none">0 errors</span>
+        <div style="flex:1"></div>
+        <span style="font-size:11px;color:var(--text3)" id="paneInfo">—</span>
+      </div>
+
+      <div class="editor-area">
+        <!-- Source pane -->
+        <div class="editor-pane" id="sourcePane">
+          <div class="pane-header">
+            <span class="pane-title">Original</span>
+            <span style="flex:1"></span>
+            <span style="font-size:11px;color:var(--text3)" id="srcLangLabel"></span>
+          </div>
+          <div class="pane-scroll" id="sourceList">
+            <div class="drop-zone" id="dropZone">
+              <div class="drop-icon">⬚</div>
+              <div class="drop-title">Drop a subtitle file here</div>
+              <div class="drop-sub">SRT · TXT · CSV — or click to browse</div>
+            </div>
+          </div>
+        </div>
+        <!-- Translated pane -->
+        <div class="editor-pane" id="translatedPane" style="display:none">
+          <div class="pane-header">
+            <span class="pane-title">Translated</span>
+            <span style="flex:1"></span>
+            <span style="font-size:11px;color:var(--text3)" id="tgtLangLabel"></span>
+          </div>
+          <div class="pane-scroll" id="translatedList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+const MAX_H = 42, MAX_V = 32;
+let subtitles = [];
+let translated = [];
+let outputMode = 'horizontal';
+
+const $ = id => document.getElementById(id);
+
+// ——— API key indicator ———
+$('apiKey').addEventListener('input', () => {
+  const v = $('apiKey').value.trim();
+  $('apiStatus').className = 'api-status' + (v.startsWith('AIza') && v.length > 20 ? ' ok' : '');
+});
+
+// ——— Output mode ———
+function setOutput(mode) {
+  outputMode = mode;
+  $('opt-h').className = 'radio-option' + (mode === 'horizontal' ? ' active' : '');
+  $('opt-v').className = 'radio-option' + (mode === 'vertical' ? ' active' : '');
+  const max = mode === 'horizontal' ? MAX_H : MAX_V;
+  $('limitInfo').innerHTML = `<b>Max chars/line:</b> ${max}<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> ${mode === 'vertical' ? 'on' : 'off'}`;
+  renderSource();
+  if (translated.length) renderTranslated();
+}
+
+// ——— Language ———
+const LANG_CODES = {Spanish:'ES',French:'FR',German:'DE',Italian:'IT',Portuguese:'PT',Dutch:'NL',Polish:'PL',Russian:'RU',Turkish:'TR',Arabic:'AR',Japanese:'JA',Korean:'KO','Chinese (Simplified)':'ZH',Catalan:'CA'};
+
+function setLang(l) {
+  $('langSelect').value = l;
+  syncChips();
+}
+
+function syncChips() {
+  const sel = $('langSelect').value;
+  document.querySelectorAll('.lang-chip').forEach(c => {
+    const matches = Object.entries(LANG_CODES).some(([name, code]) => c.textContent === code && name === sel);
+    c.className = 'lang-chip' + (matches ? ' active' : '');
+  });
+}
+syncChips();
+
+// ——— Tab switching ———
+function switchTab(tab) {
+  $('tab-source').className = 'tab-btn' + (tab === 'source' ? ' active' : '');
+  $('tab-translated').className = 'tab-btn' + (tab === 'translated' ? ' active' : '');
+  $('sourcePane').style.display = tab === 'source' ? 'flex' : 'none';
+  $('translatedPane').style.display = tab === 'translated' ? 'flex' : 'none';
+}
+
+// ——— File input ———
+$('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => parseContent(ev.target.result, f.name);
+  r.readAsText(f);
+  e.target.value = '';
+});
+
+// ——— Drop zone ———
+function setupDrop() {
+  const dz = $('dropZone');
+  if (!dz) return;
+  dz.addEventListener('click', () => $('fileInput').click());
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => parseContent(ev.target.result, f.name);
+    r.readAsText(f);
+  });
+}
+setupDrop();
+
+function parsePaste() {
+  const txt = $('pasteArea').value.trim();
+  if (!txt) return;
+  parseContent(txt, 'pasted.srt');
+}
+
+// ——— Parsers ———
+function parseContent(text, filename) {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  const hint = $('importFormat').value;
+  const mode = hint !== 'auto' ? hint : ext;
+
+  if (mode === 'csv') subtitles = parseCSV(text);
+  else if (mode === 'txt') subtitles = parseTXT(text);
+  else subtitles = parseSRT(text); // default / srt
+
+  translated = [];
+  $('exportBtn').disabled = true;
+  $('translateBtn').disabled = subtitles.length === 0;
+  renderSource();
+  updatePills(subtitles);
+  $('srcLangLabel').textContent = subtitles.length + ' entries';
+  setStatus('');
+}
+
+function parseSRT(text) {
+  const blocks = text.trim().split(/\n\s*\n/);
+  return blocks.map(b => {
+    const lines = b.trim().split('\n');
+    if (lines.length < 2) return null;
+    const idx = parseInt(lines[0]) || 0;
+    const timeLine = lines[1] || '';
+    const arrow = timeLine.indexOf('-->');
+    if (arrow < 0) return null;
+    const start = timeLine.slice(0, arrow).trim();
+    const end = timeLine.slice(arrow + 3).trim();
+    const txt = lines.slice(2).join('\n').replace(/<[^>]+>/g, '').trim();
+    return txt ? { index: idx, start, end, text: txt } : null;
+  }).filter(Boolean);
+}
+
+function parseCSV(text) {
+  return text.trim().split('\n').map((line, i) => {
+    // Simple CSV: skip header if it says "start,end,text"
+    if (i === 0 && /^start\s*,/i.test(line)) return null;
+    const parts = line.split(',');
+    if (parts.length >= 3) {
+      const txt = parts.slice(2).join(',').replace(/^"|"$/g, '').trim();
+      return txt ? { index: i, start: parts[0].trim(), end: parts[1].trim(), text: txt } : null;
+    }
+    const txt = line.replace(/^"|"$/g, '').trim();
+    return txt ? { index: i + 1, start: '00:00:00,000', end: '00:00:01,000', text: txt } : null;
+  }).filter(Boolean).map((s, i) => ({ ...s, index: i + 1 }));
+}
+
+function parseTXT(text) {
+  return text.trim().split('\n').filter(l => l.trim()).map((line, i) => ({
+    index: i + 1, start: '00:00:00,000', end: '00:00:01,000', text: line.trim()
+  }));
+}
+
+// ——— Char checks ———
+function maxLen() { return outputMode === 'horizontal' ? MAX_H : MAX_V; }
+
+function charStatus(text) {
+  const lines = text.split('\n');
+  const longest = Math.max(...lines.map(l => l.length));
+  if (longest > maxLen()) return 'error';
+  if (longest > Math.floor(maxLen() * 0.85)) return 'warn';
+  return 'ok';
+}
+
+// ——— Rendering ———
+function renderSubCard(sub, container) {
+  const st = charStatus(sub.text);
+  const lines = sub.text.split('\n');
+  const longest = Math.max(...lines.map(l => l.length));
+  const pct = Math.min(100, Math.round(longest / maxLen() * 100));
+  const card = document.createElement('div');
+  card.className = 'subtitle-card' + (st === 'error' ? ' error' : st === 'warn' ? ' warn' : '');
+  card.innerHTML =
+    `<div class="sub-index">#${sub.index}</div>` +
+    `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>` +
+    `<div class="sub-text">${escHtml(sub.text)}</div>` +
+    `<div class="sub-meta">` +
+      `<span class="sub-chars ${st === 'ok' ? '' : st}">${longest}/${maxLen()} chars</span>` +
+      `<div class="char-bar"><div class="char-bar-fill ${st === 'ok' ? '' : st}" style="width:${pct}%"></div></div>` +
+    `</div>`;
+  container.appendChild(card);
+}
+
+function escHtml(t) {
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderSource() {
+  const list = $('sourceList');
+  list.innerHTML = '';
+  if (!subtitles.length) {
+    list.innerHTML = `<div class="drop-zone" id="dropZone">
+      <div class="drop-icon">⬚</div>
+      <div class="drop-title">Drop a subtitle file here</div>
+      <div class="drop-sub">SRT · TXT · CSV — or click to browse</div>
+    </div>`;
+    setupDrop();
+    return;
+  }
+  subtitles.forEach(s => renderSubCard(s, list));
+}
+
+function renderTranslated() {
+  const list = $('translatedList');
+  list.innerHTML = '';
+  const subs = outputMode === 'vertical' ? splitForVertical(translated) : translated;
+  subs.forEach(s => renderSubCard(s, list));
+  $('tgtLangLabel').textContent = $('langSelect').value + ' · ' + subs.length + ' entries';
+  $('exportBtn').disabled = false;
+  updatePills(subs);
+}
+
+// ——— Vertical split ———
+function splitForVertical(subs) {
+  const result = [];
+  let newIdx = 1;
+  subs.forEach(sub => {
+    const lines = sub.text.split('\n');
+    const needsSplit = lines.some(l => l.length > MAX_V) || lines.length > 2;
+    if (!needsSplit) {
+      result.push({ ...sub, index: newIdx++ });
+      return;
+    }
+    const allText = lines.join(' ').trim();
+    // Find best split point near the middle, at a word boundary
+    const half = Math.ceil(allText.length / 2);
+    let splitAt = allText.lastIndexOf(' ', half);
+    if (splitAt < 1) splitAt = half;
+    const part1 = allText.slice(0, splitAt).trim();
+    const part2 = allText.slice(splitAt).trim();
+    const midTime = midTimecode(sub.start, sub.end);
+    result.push({ index: newIdx++, start: sub.start, end: midTime, text: part1 });
+    result.push({ index: newIdx++, start: midTime, end: sub.end, text: part2 });
+  });
+  return result;
+}
+
+function tcToMs(t) {
+  const clean = t.replace(',', '.');
+  const parts = clean.split(':');
+  const [s, ms] = parts[2].split('.');
+  return ((+parts[0]) * 3600 + (+parts[1]) * 60 + (+s)) * 1000 + (+(ms || 0));
+}
+
+function msToTc(ms) {
+  const h = Math.floor(ms / 3600000); ms %= 3600000;
+  const m = Math.floor(ms / 60000); ms %= 60000;
+  const s = Math.floor(ms / 1000); ms %= 1000;
+  return `${pad(h)}:${pad(m)}:${pad(s)},${String(ms).padStart(3, '0')}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function midTimecode(start, end) {
+  return msToTc(Math.round((tcToMs(start) + tcToMs(end)) / 2));
+}
+
+// ——— Pills ———
+function updatePills(subs) {
+  $('countPill').textContent = (subs || subtitles).length + ' subs';
+  const list = subs || subtitles;
+  const warns = list.filter(s => charStatus(s.text) === 'warn').length;
+  const errs = list.filter(s => charStatus(s.text) === 'error').length;
+  $('warnPill').style.display = warns ? 'inline' : 'none';
+  $('warnPill').textContent = warns + ' warnings';
+  $('errPill').style.display = errs ? 'inline' : 'none';
+  $('errPill').textContent = errs + ' errors';
+}
+
+function setStatus(msg, type) {
+  $('statusMsg').textContent = msg;
+  $('statusMsg').className = 'status-msg' + (type ? ' ' + type : '');
+}
+
+// ——— Translation ———
+async function startTranslation() {
+  const key = $('apiKey').value.trim();
+  if (!key) { setStatus('Enter a Gemini API key first', 'err'); return; }
+  if (!subtitles.length) { setStatus('Import subtitles first', 'err'); return; }
+
+  const lang = $('langSelect').value;
+  $('translateBtn').disabled = true;
+  $('exportBtn').disabled = true;
+  translated = [];
+  const fill = $('progressFill');
+  fill.style.width = '0%';
+  setStatus('Translating…');
+
+  const BATCH = 10;
+  for (let i = 0; i < subtitles.length; i += BATCH) {
+    const batch = subtitles.slice(i, i + BATCH);
+    const prompt = [
+      `You are a professional subtitle translator. Translate each subtitle to ${lang}.`,
+      `Rules:`,
+      `- Preserve meaning and natural spoken rhythm`,
+      `- Keep line breaks using \\n if the source has them`,
+      `- Return ONLY a JSON array of strings, one per subtitle, in order`,
+      `- No explanations, no markdown, no extra text`,
+      ``,
+      `Source subtitles (JSON array):`,
+      JSON.stringify(batch.map(s => s.text))
+    ].join('\n');
+
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+          })
+        }
+      );
+      const data = await resp.json();
+
+      if (data.error) {
+        setStatus('Gemini error: ' + data.error.message, 'err');
+        $('translateBtn').disabled = false;
+        return;
+      }
+
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      let parsed;
+      try {
+        parsed = JSON.parse(rawText.replace(/```json\n?|```\n?/g, '').trim());
+      } catch {
+        // Fallback: use source text for this batch
+        parsed = batch.map(s => s.text);
+      }
+
+      batch.forEach((s, j) => {
+        translated.push({ ...s, text: parsed[j] !== undefined ? parsed[j] : s.text });
+      });
+
+      setStatus(`Translating… ${Math.min(i + BATCH, subtitles.length)}/${subtitles.length}`);
+    } catch (e) {
+      setStatus('Network error: ' + e.message, 'err');
+      $('translateBtn').disabled = false;
+      return;
+    }
+
+    fill.style.width = Math.round((i + batch.length) / subtitles.length * 100) + '%';
+  }
+
+  renderTranslated();
+  switchTab('translated');
+  setStatus(`Done — ${translated.length} subtitles translated`, 'ok');
+  $('translateBtn').disabled = false;
+  fill.style.width = '100%';
+}
+
+// ——— Export ———
+function exportFile() {
+  const fmt = $('exportFormat').value;
+  const subs = outputMode === 'vertical' ? splitForVertical(translated) : translated;
+  let content = '';
+
+  if (fmt === 'srt') {
+    content = subs.map((s, i) =>
+      `${i + 1}\n${s.start} --> ${s.end}\n${s.text}`
+    ).join('\n\n') + '\n';
+  } else if (fmt === 'csv') {
+    content = 'start,end,text\n' + subs.map(s =>
+      `${s.start},${s.end},"${s.text.replace(/"/g, '""')}"`
+    ).join('\n');
+  } else {
+    content = subs.map(s => s.text).join('\n');
+  }
+
+  const lang = $('langSelect').value.toLowerCase().replace(/[^a-z]/g, '_');
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `translated_${lang}.${fmt}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setStatus('File exported ✓', 'ok');
+}
+</script>
+</body>
+</html>
