@@ -564,14 +564,48 @@ async function startTranslation() {
   fill.style.width = '0%';
   setStatus('Translating…');
 
-  const BATCH = 10;
+  const BATCH = 20;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const callGemini = async (prompt, retries = 3) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+          })
+        }
+      );
+      const data = await resp.json();
+      if (data.error) {
+        const is429 = data.error.code === 429 || (data.error.message || '').includes('quota');
+        if (is429 && attempt < retries - 1) {
+          const wait = 15000 * (attempt + 1);
+          setStatus(`Rate limit hit — waiting ${wait / 1000}s before retry…`);
+          await sleep(wait);
+          continue;
+        }
+        throw new Error(data.error.message);
+      }
+      return data;
+    }
+  };
+
   for (let i = 0; i < subtitles.length; i += BATCH) {
+    if (i > 0) {
+      setStatus(`Translating… ${i}/${subtitles.length} — pausing to respect rate limits…`);
+      await sleep(5000);
+    }
     const batch = subtitles.slice(i, i + BATCH);
     const prompt = [
       `You are a professional subtitle translator. Translate each subtitle to ${lang}.`,
       `Rules:`,
       `- Preserve meaning and natural spoken rhythm`,
-      `- Keep line breaks using \\n if the source has them`,
+      `- Keep line breaks using \n if the source has them`,
       `- Return ONLY a JSON array of strings, one per subtitle, in order`,
       `- No explanations, no markdown, no extra text`,
       ``,
@@ -580,41 +614,20 @@ async function startTranslation() {
     ].join('\n');
 
     try {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
-          })
-        }
-      );
-      const data = await resp.json();
-
-      if (data.error) {
-        setStatus('Gemini error: ' + data.error.message, 'err');
-        $('translateBtn').disabled = false;
-        return;
-      }
-
+      const data = await callGemini(prompt);
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       let parsed;
       try {
         parsed = JSON.parse(rawText.replace(/```json\n?|```\n?/g, '').trim());
       } catch {
-        // Fallback: use source text for this batch
         parsed = batch.map(s => s.text);
       }
-
       batch.forEach((s, j) => {
         translated.push({ ...s, text: parsed[j] !== undefined ? parsed[j] : s.text });
       });
-
       setStatus(`Translating… ${Math.min(i + BATCH, subtitles.length)}/${subtitles.length}`);
     } catch (e) {
-      setStatus('Network error: ' + e.message, 'err');
+      setStatus('Error: ' + e.message, 'err');
       $('translateBtn').disabled = false;
       return;
     }
