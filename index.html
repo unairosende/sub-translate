@@ -138,11 +138,7 @@ input[type=file]{display:none}
 .edit-icon{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .15s;color:var(--text3);pointer-events:none}
 .sub-card.editable:hover .edit-icon{opacity:1}
 .edit-textarea{width:100%;background:var(--bg0);border:1px solid var(--accent);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:13px;padding:6px 8px;resize:vertical;outline:none;line-height:1.5;margin-top:2px}
-.edit-actions{display:flex;gap:6px;margin-top:6px}
-.edit-btn{padding:4px 10px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-family:var(--sans);transition:all .15s}
-.edit-btn.save{background:var(--accent);color:#fff;border-color:var(--accent)}
-.edit-btn.save:hover{background:var(--accent2)}
-.edit-btn.cancel:hover{background:var(--bg3);color:var(--text)}
+
 
 /* Drop zone */
 .drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;text-align:center;cursor:pointer;border:2px dashed var(--border2);border-radius:10px;margin:16px;transition:all .2s}
@@ -443,7 +439,7 @@ function renderCurrentView() {
   area.innerHTML = '';
   const activeSubs = activeTab === 'source' ? subtitles : (translations[activeTab] ? getFinalSubs(activeTab) : []);
   updatePills(activeSubs);
-  $('editHint').textContent = (activeTab !== 'source' && translations[activeTab]) ? 'Click any subtitle to edit · Ctrl+Enter to save' : '';
+  $('editHint').textContent = (activeTab !== 'source' && translations[activeTab]) ? 'Click any subtitle to edit' : '';
 
   if (viewMode === 'compare' && activeTab !== 'source' && translations[activeTab]) {
     renderCompareView(area, activeSubs);
@@ -495,6 +491,7 @@ function makeCard(sub, editable, lang) {
   const pct = Math.min(100, Math.round(longest/maxLen()*100));
   const card = el('div', 'sub-card' + (st==='error'?' error':st==='warn'?' warn':'') + (editable?' editable':''));
   card.dataset.idx = sub.index;
+  card.dataset.lang = lang;
   card.innerHTML =
     `<div class="sub-idx">#${sub.index}</div>` +
     `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>` +
@@ -506,25 +503,27 @@ function makeCard(sub, editable, lang) {
 }
 
 // Inline editing
+// Track currently open edit card globally
+let currentEditCard = null;
+
 function openEdit(card, sub, lang) {
-  if (card.classList.contains('editing')) return;
+  // If clicking the already-open card, do nothing
+  if (card === currentEditCard) return;
+  // Close any currently open card first (auto-save it)
+  if (currentEditCard) commitEdit(currentEditCard);
+
+  currentEditCard = card;
   card.classList.add('editing');
   const textEl = card.querySelector('.sub-text');
-  const metaEl = card.querySelector('.sub-meta');
-  const current = sub.text;
 
   const ta = el('textarea', 'edit-textarea');
-  ta.value = current;
-  ta.rows = Math.max(2, current.split('\n').length + 1);
+  ta.value = sub.text;
+  ta.rows = Math.max(2, sub.text.split('\n').length + 1);
   textEl.replaceWith(ta);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = ta.value.length;
 
-  const actions = el('div', 'edit-actions');
-  const saveBtn = el('button', 'edit-btn save'); saveBtn.textContent = 'Save';
-  const cancelBtn = el('button', 'edit-btn cancel'); cancelBtn.textContent = 'Cancel';
-  actions.append(saveBtn, cancelBtn);
-  metaEl.after(actions);
-  ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length;
-
+  // Live char bar update
   ta.addEventListener('input', () => {
     const st = charStatus(ta.value);
     const longest = Math.max(...ta.value.split('\n').map(l=>l.length));
@@ -535,36 +534,54 @@ function openEdit(card, sub, lang) {
     card.querySelector('.char-bar-fill').className = 'char-bar-fill' + (st==='ok'?'':' '+st);
   });
 
-  const doSave = () => {
-    const newText = ta.value;
-    const found = translations[lang]?.find(s => s.index === sub.index);
-    if (found) { found.text = newText; sub.text = newText; }
-    closeEdit(card, newText, lang, sub);
-    updatePills(getFinalSubs(lang));
-  };
-  const doCancel = () => closeEdit(card, current, lang, sub);
+  // Auto-save on blur (click away)
+  ta.addEventListener('blur', () => {
+    // Small delay so clicking another card triggers openEdit before this blur fires
+    setTimeout(() => { if (currentEditCard === card) commitEdit(card); }, 80);
+  });
 
-  saveBtn.addEventListener('click', doSave);
-  cancelBtn.addEventListener('click', doCancel);
+  // Escape closes without saving
   ta.addEventListener('keydown', e => {
-    if ((e.metaKey||e.ctrlKey) && e.key==='Enter') { e.preventDefault(); doSave(); }
-    if (e.key==='Escape') doCancel();
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit(card, sub.text, lang, sub);
+    }
   });
 }
 
-function closeEdit(card, text, lang, sub) {
+function commitEdit(card) {
+  const ta = card.querySelector('.edit-textarea');
+  if (!ta) return;
+  const lang = card.dataset.lang;
+  const idx = parseInt(card.dataset.idx);
+  const newText = ta.value;
+  const found = translations[lang]?.find(s => s.index === idx);
+  if (found) { found.text = newText; }
+  closeEditCard(card, newText, lang);
+  updatePills(getFinalSubs(lang));
+}
+
+function cancelEdit(card, originalText, lang, sub) {
+  currentEditCard = null;
+  closeEditCard(card, originalText, lang);
+}
+
+function closeEditCard(card, text, lang) {
+  currentEditCard = null;
   card.classList.remove('editing');
   const ta = card.querySelector('.edit-textarea');
-  const actions = card.querySelector('.edit-actions');
   const st = charStatus(text);
   const newTextEl = el('div', 'sub-text');
   newTextEl.textContent = text;
   if (ta) ta.replaceWith(newTextEl);
-  if (actions) actions.remove();
   card.className = 'sub-card' + (st==='error'?' error':st==='warn'?' warn':'') + ' editable';
-  // Re-attach click so future edits work
-  card.onclick = null;
-  card.addEventListener('click', () => openEdit(card, sub, lang));
+  // Re-attach click using live lookup from translations store
+  card.onclick = () => {
+    const idx = parseInt(card.dataset.idx);
+    const lg = card.dataset.lang;
+    const sub = translations[lg]?.find(s => s.index === idx);
+    if (sub) openEdit(card, sub, lg);
+  };
 }
 
 // Scroll sync
@@ -652,7 +669,7 @@ async function startTranslation() {
 
   const snap = [...subtitles];
   const result = [];
-  const BATCH = 20;
+  const BATCH = 30;
   const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
   const callGemini = async (prompt, retries=3) => {
@@ -665,7 +682,7 @@ async function startTranslation() {
       const data = await resp.json();
       if (data.error) {
         const is429 = data.error.code===429 || (data.error.message||'').includes('quota');
-        if (is429 && attempt<retries-1) { const w=15000*(attempt+1); setStatus(`Rate limit — waiting ${w/1000}s…`); await sleep(w); continue; }
+        if (is429 && attempt<retries-1) { const w=30000*(attempt+1); setStatus(`Rate limit — waiting ${w/1000}s… (retry ${attempt+1}/${retries})`); await sleep(w); continue; }
         throw new Error(data.error.message);
       }
       return data;
@@ -673,7 +690,12 @@ async function startTranslation() {
   };
 
   for (let i=0; i<snap.length; i+=BATCH) {
-    if (i>0) { setStatus(`Translating… ${i}/${snap.length} — pausing…`); await sleep(5000); }
+    if (i>0) {
+      for (let c=10; c>0; c--) {
+        setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);
+        await sleep(1000);
+      }
+    }
     const batch = snap.slice(i,i+BATCH);
     const prompt = [
       `You are a professional subtitle translator. Translate each subtitle to ${lang}.`,
