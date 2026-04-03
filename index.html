@@ -116,10 +116,6 @@ input[type=file]{display:none}
 .fix-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid #5a1a1a;background:var(--red-dim);color:var(--red);font-family:var(--sans);transition:all .15s;white-space:nowrap}
 .fix-btn:hover{background:#4a1010;border-color:var(--red)}
 .fix-btn:disabled{opacity:.4;cursor:not-allowed}
-.suggest-btn{padding:4px 9px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:var(--sans);transition:all .15s;display:flex;align-items:center;gap:4px}
-.suggest-btn:hover{border-color:var(--accent);color:var(--accent)}
-.suggest-btn:disabled{opacity:.4;cursor:not-allowed}
-.suggest-btn.loading{opacity:.6;cursor:wait}
 .toggle-row{display:flex;align-items:center;gap:8px;padding:6px 0}
 .toggle-label{font-size:12px;color:var(--text2);flex:1;line-height:1.3}
 .toggle{position:relative;width:30px;height:17px;flex-shrink:0}
@@ -332,8 +328,8 @@ input[type=file]{display:none}
         <span class="pill pill-amber" id="warnPill" style="display:none">0 warnings</span>
         <span class="pill pill-red" id="errPill" style="display:none">0 errors</span>
         <button class="fix-btn" id="fixBtn" style="display:none" onclick="fixOverlength()">
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L6 9M2 14l4-1 7-7-3-3-7 7-1 4z"/><path d="M11 4l1 1"/></svg>
-          Fix errors
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/><path d="M12 4l-8 8"/><path d="M1 13l2-2"/><path d="M13.5 0.5l2 2-1 1-2-2 1-1z"/></svg>
+          Fix
         </button>
         <span class="edit-hint" id="editHint"></span>
       </div>
@@ -697,43 +693,6 @@ function openEdit(card, sub, lang) {
     card.querySelector('.char-bar-fill').className = 'char-bar-fill' + (st==='ok'?'':' '+st);
   });
 
-  // Suggest button
-  const suggestWrap = el('div', '');
-  suggestWrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin-top:6px';
-  const suggestBtn = el('button', 'suggest-btn');
-  suggestBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v4M8 11v4M1 8h4M11 8h4M3.5 3.5l2.8 2.8M9.7 9.7l2.8 2.8M3.5 12.5l2.8-2.8M9.7 6.3l2.8-2.8"/></svg> Suggest`;
-  const suggestHint = el('span','');
-  suggestHint.style.cssText = 'font-size:10px;color:var(--text3);flex:1';
-  suggestWrap.append(suggestBtn, suggestHint);
-  card.querySelector('.sub-meta').after(suggestWrap);
-
-  suggestBtn.addEventListener('mousedown', e => e.preventDefault()); // prevent blur
-  suggestBtn.addEventListener('click', async () => {
-    const key = $('apiKey').value.trim();
-    if (!key) { suggestHint.textContent = 'No API key'; return; }
-    suggestBtn.disabled = true;
-    suggestBtn.innerHTML = '<span class="suggest-spinner"></span> Thinking…';
-    suggestHint.textContent = '';
-    const srcSub = subtitles.find(s => s.index === sub.index);
-    const srcText = srcSub ? srcSub.text : ta.value;
-    const limit = maxLen();
-    const allowR = $('allowRephrase')?.checked;
-    const prompt = allowR
-      ? `You are a professional subtitle translator. The subtitle below in ${lang} is too long (max ${limit} chars/line, max 2 lines). Rewrite it to fit, keeping the same meaning. You may rephrase slightly. Return ONLY the new subtitle text, nothing else.\n\nOriginal source: ${srcText}\nCurrent translation: ${ta.value}`
-      : `You are a professional subtitle translator. The subtitle below in ${lang} is too long (max ${limit} chars/line, max 2 lines). Reflow the text across up to 2 lines using a line break (\n) at a natural point. Do NOT change any words. Return ONLY the reformatted subtitle text.\n\nCurrent translation: ${ta.value}`;
-    try {
-      const raw = await callProvider(prompt, key, 2);
-      const suggestion = raw.replace(/```[\s\S]*?```/g,'').trim().replace(/^["']|["']$/g,'');
-      ta.value = suggestion;
-      ta.dispatchEvent(new Event('input'));
-      suggestHint.textContent = '✓ suggestion applied';
-    } catch(e) {
-      suggestHint.textContent = 'Error: ' + e.message.slice(0,40);
-    }
-    suggestBtn.disabled = false;
-    suggestBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v4M8 11v4M1 8h4M11 8h4M3.5 3.5l2.8 2.8M9.7 9.7l2.8 2.8M3.5 12.5l2.8-2.8M9.7 6.3l2.8-2.8"/></svg> Suggest`;
-  });
-
   // Auto-save on blur (click away)
   ta.addEventListener('blur', () => {
     // Small delay so clicking another card triggers openEdit before this blur fires
@@ -774,9 +733,6 @@ function closeEditCard(card, text, lang) {
   const newTextEl = el('div', 'sub-text');
   newTextEl.textContent = text;
   if (ta) ta.replaceWith(newTextEl);
-  // Remove suggest wrap if present
-  const sw = card.querySelector('.suggest-btn')?.closest('div');
-  if (sw) sw.remove();
   card.className = 'sub-card' + (st==='error'?' error':st==='warn'?' warn':'') + ' editable';
   // Re-attach click using live lookup from translations store
   card.onclick = () => {
@@ -966,11 +922,35 @@ async function startTranslation() {
 }
 
 // ── Fix overlength subtitles ──
+// ── Fix overlength: pure JS reflow (instant), AI only if rephrase toggle is on ──
+
+function reflowText(text, limit) {
+  // Flatten existing lines into one string
+  const flat = text.replace(/\n/g, ' ').replace(/  +/g, ' ').trim();
+  if (flat.length <= limit) return flat;
+
+  // Try every word-boundary split, pick most balanced where both halves fit
+  const words = flat.split(' ');
+  let bestSplit = -1, bestScore = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const l1 = words.slice(0, i).join(' ');
+    const l2 = words.slice(i).join(' ');
+    if (l1.length > limit || l2.length > limit) continue;
+    const score = Math.abs(l1.length - l2.length);
+    if (score < bestScore) { bestScore = score; bestSplit = i; }
+  }
+  if (bestSplit > 0) {
+    return words.slice(0, bestSplit).join(' ') + '\n' + words.slice(bestSplit).join(' ');
+  }
+  // Fallback: hard-cut at last word before limit
+  const cut = flat.lastIndexOf(' ', limit);
+  if (cut > 0) return flat.slice(0, cut) + '\n' + flat.slice(cut + 1);
+  return flat.slice(0, limit) + '\n' + flat.slice(limit);
+}
+
+
 async function fixOverlength() {
   if (activeTab === 'source' || !translations[activeTab]) return;
-  const key = $('apiKey').value.trim();
-  if (!key) { setStatus('Enter an API key first','err'); return; }
-
   const lang = activeTab;
   const subs = translations[lang];
   const limit = maxLen();
@@ -979,56 +959,76 @@ async function fixOverlength() {
   if (!toFix.length) return;
 
   const fixBtn = $('fixBtn');
+  const wandIcon = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/><path d="M12 4l-8 8"/><path d="M1 13l2-2"/><path d="M13.5 0.5l2 2-1 1-2-2 1-1z"/></svg>`;
+
+  // ── Default path: pure JS reflow, instant, no API needed ──
+  if (!allowRephrase) {
+    let fixed = 0;
+    toFix.forEach(s => {
+      const found = subs.find(x => x.index === s.index);
+      if (!found) return;
+      const reflowed = reflowText(found.text, limit);
+      if (reflowed !== found.text) { found.text = reflowed; fixed++; }
+    });
+    setStatus(`Fixed ${fixed} subtitle${fixed !== 1 ? 's' : ''}`, 'ok');
+    renderCurrentView();
+    return;
+  }
+
+  // ── Rephrase path: use AI ──
+  const key = $('apiKey').value.trim();
+  if (!key) { setStatus('Enter an API key first', 'err'); return; }
+
   fixBtn.disabled = true;
   fixBtn.innerHTML = '<span class="suggest-spinner"></span> Fixing…';
-  setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
+  setStatus(`Fixing ${toFix.length} subtitle${toFix.length > 1 ? 's' : ''}…`);
 
-  const sleep = ms => new Promise(r=>setTimeout(r,ms));
-  const BATCH = 10;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const BATCH = 15;
   let fixed = 0;
 
-  for (let i=0; i<toFix.length; i+=BATCH) {
-    if (i>0) { setStatus(`Fixing… ${i}/${toFix.length} — pausing…`); await sleep(4000); }
-    const batch = toFix.slice(i,i+BATCH);
+  for (let i = 0; i < toFix.length; i += BATCH) {
+    if (i > 0) {
+      for (let c = 5; c > 0; c--) {
+        setStatus(`Fixing… ${i}/${toFix.length} — next in ${c}s…`);
+        await sleep(1000);
+      }
+    }
+    const batch = toFix.slice(i, i + BATCH);
+    const srcTexts = batch.map(s => subtitles.find(o => o.index === s.index)?.text || '');
+    const prompt = `You are a professional subtitle editor. Each subtitle in ${lang} is too long (max ${limit} chars/line, max 2 lines). Rephrase each one slightly to fit — keep the exact same meaning. Split into 2 lines using \n where natural. Return ONLY a JSON array of strings, one per subtitle, no extra text.
 
-    // Build source originals for context
-    const srcTexts = batch.map(s => {
-      const src = subtitles.find(o => o.index === s.index);
-      return src ? src.text : '';
-    });
+Source texts:
+${JSON.stringify(srcTexts)}
 
-    const prompt = allowRephrase
-      ? `You are a professional subtitle editor. Each subtitle below in ${lang} exceeds the max ${limit} characters per line limit. For each one, rewrite it to fit within ${limit} chars per line, max 2 lines. You may rephrase slightly to fit. Keep the same meaning. Return ONLY a JSON array of strings (one per subtitle) with the fixed texts. Use \n for line breaks.\n\nOriginal sources:\n${JSON.stringify(srcTexts)}\n\nCurrent translations (need fixing):\n${JSON.stringify(batch.map(s=>s.text))}`
-      : `You are a professional subtitle editor. Each subtitle below in ${lang} exceeds the max ${limit} characters per line limit. For each one, reflow the text across up to 2 lines using \n at the most natural break point. Do NOT change any words — only add or move the line break. Return ONLY a JSON array of strings (one per subtitle). Use \n for line breaks.\n\nSubtitles to reflow:\n${JSON.stringify(batch.map(s=>s.text))}`;
+Current translations:
+${JSON.stringify(batch.map(s => s.text))}`;
 
     try {
       const raw = await callProvider(prompt, key, 3);
       let parsed;
-      try { parsed = JSON.parse(raw.replace(/\`\`\`json\n?|\`\`\`\n?/g,'').trim()); }
+      try { parsed = JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g, '').trim()); }
       catch { parsed = null; }
-
       if (Array.isArray(parsed)) {
         batch.forEach((s, j) => {
           if (parsed[j] !== undefined) {
             const found = subs.find(x => x.index === s.index);
-            if (found) found.text = parsed[j];
-            fixed++;
+            if (found) { found.text = parsed[j]; fixed++; }
           }
         });
       }
     } catch(e) {
-      setStatus('Fix error: '+e.message,'err');
+      setStatus('Fix error: ' + e.message, 'err');
       fixBtn.disabled = false;
-      fixBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L6 9M2 14l4-1 7-7-3-3-7 7-1 4z"/><path d="M11 4l1 1"/></svg> Fix errors';
+      fixBtn.innerHTML = wandIcon + ' Fix';
       return;
     }
-
-    $('progressFill').style.width = Math.round((i+batch.length)/toFix.length*100)+'%';
+    $('progressFill').style.width = Math.round((i + batch.length) / toFix.length * 100) + '%';
   }
 
-  setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok');
+  setStatus(`Fixed ${fixed} subtitle${fixed !== 1 ? 's' : ''}`, 'ok');
   fixBtn.disabled = false;
-  fixBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L6 9M2 14l4-1 7-7-3-3-7 7-1 4z"/><path d="M11 4l1 1"/></svg> Fix errors';
+  fixBtn.innerHTML = wandIcon + ' Fix';
   $('progressFill').style.width = '0%';
   renderCurrentView();
 }
