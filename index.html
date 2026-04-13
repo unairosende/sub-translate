@@ -84,6 +84,32 @@ textarea.paste-area:focus{border-color:var(--accent)}
 textarea.paste-area::placeholder{color:var(--text3)}
 input[type=file]{display:none}
 
+/* Transcription */
+.xc-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;cursor:pointer;border:2px dashed var(--border2);border-radius:8px;transition:all .2s;min-height:80px}
+.xc-drop:hover,.xc-drop.drag{border-color:var(--accent);background:var(--accent-dim)}
+.xc-drop-icon{font-size:22px;opacity:.4;line-height:1}
+.xc-drop-title{font-size:12px;font-weight:500;color:var(--text2)}
+.xc-drop-sub{font-size:10px;color:var(--text3)}
+.xc-file-row{display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text2)}
+.xc-file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px}
+.xc-file-rm{cursor:pointer;color:var(--text3);padding:2px 4px;border-radius:3px;line-height:1;font-size:14px}
+.xc-file-rm:hover{color:var(--red);background:var(--red-dim)}
+.xc-progress{margin:6px 0}
+.xc-status{font-size:11px;color:var(--text3);min-height:14px;margin-top:3px;line-height:1.4}
+.xc-status.ok{color:var(--green)}
+.xc-status.err{color:var(--red)}
+.tab-switcher{display:flex;background:var(--bg2);border-radius:6px;padding:2px;gap:2px;margin-bottom:10px}
+.tab-sw-btn{flex:1;padding:5px 6px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:var(--sans);transition:all .15s;text-align:center}
+.tab-sw-btn.active{background:var(--bg3);color:var(--text)}
+.tab-sw-btn:hover:not(.active){color:var(--text2)}
+.xc-sep{height:1px;background:var(--border);margin:10px 0}
+.xc-key-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.xc-key-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.xc-key-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;min-width:0}
+.xc-key-input:focus{border-color:var(--accent)}
+.xc-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+.xc-dot.ok{background:var(--green)}
+
 /* Center */
 .center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
@@ -185,33 +211,107 @@ input[type=file]{display:none}
     <div class="sidebar">
 
       <div class="s-sec">
-        <div class="s-title">Import</div>
-        <input type="file" id="fileInput" accept=".srt,.txt,.csv">
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="flex:1">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
-            Open file
-          </button>
-          <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear everything" style="flex:0 0 auto;padding:7px 10px;color:var(--text3)" disabled>
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
-          </button>
+        <div class="tab-switcher">
+          <button class="tab-sw-btn active" id="sw-import" onclick="switchImportTab('import')">Import</button>
+          <button class="tab-sw-btn" id="sw-transcribe" onclick="switchImportTab('transcribe')">Transcribe</button>
         </div>
-        <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
-        <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
-        <div style="margin-top:9px">
-          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:5px">Hint format</div>
-          <select class="select" id="importFormat">
+
+        <!-- Import panel -->
+        <div id="panel-import">
+          <input type="file" id="fileInput" accept=".srt,.txt,.csv">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="flex:1">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+              Open file
+            </button>
+            <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear everything" style="flex:0 0 auto;padding:7px 10px;color:var(--text3)" disabled>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
+            </button>
+          </div>
+          <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
+          <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
+          <div style="margin-top:9px">
+            <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:5px">Hint format</div>
+            <select class="select" id="importFormat">
+              <option value="auto">Auto-detect</option>
+              <option value="srt">SRT</option>
+              <option value="txt">TXT (one per line)</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Transcribe panel -->
+        <div id="panel-transcribe" style="display:none">
+
+          <!-- Whisper provider -->
+          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:7px">Whisper provider</div>
+          <div class="provider-grid" style="margin-bottom:8px">
+            <div class="pvdr-btn active" id="xc-pvdr-groq" onclick="setXcProvider('groq')">
+              <span class="pvdr-name">Groq</span>
+              <span class="pvdr-rpm">Free · 2K/day</span>
+            </div>
+            <div class="pvdr-btn" id="xc-pvdr-openai" onclick="setXcProvider('openai')">
+              <span class="pvdr-name">OpenAI</span>
+              <span class="pvdr-rpm">$0.006/min</span>
+            </div>
+          </div>
+          <div class="xc-key-row">
+            <span class="xc-key-label" id="xcKeyLabel">Groq key</span>
+            <input class="xc-key-input" type="password" id="xcApiKey" placeholder="gsk_..." autocomplete="off">
+            <div class="xc-dot" id="xcDot"></div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:10px" id="xcKeyHint">Same key as translation if using Groq</div>
+
+          <div class="xc-sep"></div>
+
+          <!-- Source language -->
+          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:6px">Audio language</div>
+          <select class="select" id="xcSourceLang" style="margin-bottom:10px;font-size:12px">
             <option value="auto">Auto-detect</option>
-            <option value="srt">SRT</option>
-            <option value="txt">TXT (one per line)</option>
-            <option value="csv">CSV</option>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="nl">Dutch</option>
+            <option value="pl">Polish</option>
+            <option value="ru">Russian</option>
+            <option value="tr">Turkish</option>
+            <option value="ar">Arabic</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese</option>
+            <option value="ca">Catalan</option>
           </select>
+
+          <!-- File drop -->
+          <input type="file" id="xcFileInput" accept="audio/*,video/*,.mp3,.mp4,.wav,.m4a,.mov,.mkv,.aac,.ogg,.flac,.webm">
+          <div class="xc-drop" id="xcDrop">
+            <div class="xc-drop-icon">🎙</div>
+            <div class="xc-drop-title">Drop audio or video file</div>
+            <div class="xc-drop-sub">MP3 · MP4 · WAV · M4A · MOV · MKV · max 25MB</div>
+          </div>
+          <div id="xcFileInfo" style="display:none"></div>
+
+          <div class="xc-progress" style="margin-top:8px">
+            <div class="progress-bar"><div class="progress-fill" id="xcProgressFill"></div></div>
+          </div>
+          <div class="xc-status" id="xcStatus"></div>
+
+          <button class="btn btn-primary" id="xcBtn" onclick="startTranscription()" style="margin-top:8px" disabled>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1a3 3 0 013 3v4a3 3 0 01-6 0V4a3 3 0 013-3z"/><path d="M3 9a5 5 0 0010 0M8 14v2M5 16h6"/></svg>
+            Transcribe
+          </button>
         </div>
       </div>
 
       <div class="s-sec">
-        <div class="s-title">Target language</div>
-        <select class="select" id="langSelect" onchange="syncChips()">
+        <div class="s-title">Source language</div>
+        <select class="select" id="srcLangSelect">
+          <option value="Auto-detect">Auto-detect</option>
+          <option value="English">English</option>
           <option value="Spanish">Spanish</option>
           <option value="French">French</option>
           <option value="German">German</option>
@@ -227,7 +327,33 @@ input[type=file]{display:none}
           <option value="Chinese (Simplified)">Chinese (Simplified)</option>
           <option value="Catalan">Catalan</option>
         </select>
+      </div>
+
+      <div class="s-sec">
+        <div class="s-title">Target language</div>
+        <select class="select" id="langSelect" onchange="onLangSelectChange()">
+          <option value="English">English</option>
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+          <option value="German">German</option>
+          <option value="Italian">Italian</option>
+          <option value="Portuguese">Portuguese</option>
+          <option value="Dutch">Dutch</option>
+          <option value="Polish">Polish</option>
+          <option value="Russian">Russian</option>
+          <option value="Turkish">Turkish</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Japanese">Japanese</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+          <option value="Catalan">Catalan</option>
+          <option value="__custom__">Custom…</option>
+        </select>
+        <input class="select" type="text" id="langCustom" placeholder="Type any language…"
+          style="display:none;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;width:100%;outline:none"
+          oninput="syncChips()">
         <div class="lang-chips">
+          <span class="lchip" onclick="setLang('English')">EN</span>
           <span class="lchip" onclick="setLang('Spanish')">ES</span>
           <span class="lchip" onclick="setLang('French')">FR</span>
           <span class="lchip" onclick="setLang('German')">DE</span>
@@ -235,7 +361,6 @@ input[type=file]{display:none}
           <span class="lchip" onclick="setLang('Catalan')">CA</span>
           <span class="lchip" onclick="setLang('Japanese')">JA</span>
           <span class="lchip" onclick="setLang('Korean')">KO</span>
-          <span class="lchip" onclick="setLang('Arabic')">AR</span>
         </div>
       </div>
 
@@ -349,7 +474,7 @@ let viewMode = 'list';
 const $ = id => document.getElementById(id);
 
 const LANG_CODES = {
-  Spanish:'ES',French:'FR',German:'DE',Italian:'IT',Portuguese:'PT',
+  English:'EN',Spanish:'ES',French:'FR',German:'DE',Italian:'IT',Portuguese:'PT',
   Dutch:'NL',Polish:'PL',Russian:'RU',Turkish:'TR',Arabic:'AR',
   Japanese:'JA',Korean:'KO','Chinese (Simplified)':'ZH',Catalan:'CA'
 };
@@ -460,9 +585,32 @@ function setOutput(mode) {
 }
 
 // Language
-function setLang(l) { $('langSelect').value = l; syncChips(); }
-function syncChips() {
+function getTargetLang() {
   const sel = $('langSelect').value;
+  if (sel === '__custom__') return $('langCustom').value.trim() || '';
+  return sel;
+}
+
+function setLang(l) {
+  $('langSelect').value = l;
+  $('langCustom').style.display = 'none';
+  syncChips();
+}
+
+function onLangSelectChange() {
+  const sel = $('langSelect').value;
+  const customInput = $('langCustom');
+  if (sel === '__custom__') {
+    customInput.style.display = '';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+  syncChips();
+}
+
+function syncChips() {
+  const sel = getTargetLang();
   document.querySelectorAll('.lchip').forEach(c => {
     const match = Object.entries(LANG_CODES).some(([n, code]) => c.textContent === code && n === sel);
     c.className = 'lchip' + (match ? ' active' : '');
@@ -874,7 +1022,10 @@ async function startTranslation() {
   if (!key) { setStatus('Enter a Gemini API key first','err'); return; }
   if (!subtitles.length) { setStatus('Import subtitles first','err'); return; }
 
-  const lang = $('langSelect').value;
+  const lang = getTargetLang();
+  if (!lang) { setStatus('Enter a target language', 'err'); return; }
+  const srcLang = $('srcLangSelect').value;
+  const srcLangNote = srcLang !== 'Auto-detect' ? ' from ' + srcLang : '';
   $('translateBtn').disabled = true;
   $('exportBtn').disabled = true;
   const fill = $('progressFill');
@@ -896,7 +1047,7 @@ async function startTranslation() {
     }
     const batch = snap.slice(i,i+BATCH);
     const prompt = [
-      `You are a professional subtitle translator. Translate each subtitle to ${lang}.`,
+      `You are a professional subtitle translator. Translate each subtitle${srcLangNote} to ${lang}.`,
       `Rules:`,`- Preserve meaning and natural spoken rhythm`,
       `- Keep line breaks using \\n if the source has them`,
       `- Return ONLY a JSON array of strings, one per subtitle, in order`,
@@ -1063,6 +1214,272 @@ function clearAll() {
   setStatus('');
   rebuildTabs();
   renderCurrentView();
+}
+
+
+// ══════════════════════════════════════════════
+//  Import tab switcher
+// ══════════════════════════════════════════════
+function switchImportTab(tab) {
+  $('sw-import').className    = 'tab-sw-btn' + (tab === 'import'     ? ' active' : '');
+  $('sw-transcribe').className = 'tab-sw-btn' + (tab === 'transcribe' ? ' active' : '');
+  $('panel-import').style.display     = tab === 'import'     ? '' : 'none';
+  $('panel-transcribe').style.display = tab === 'transcribe' ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════
+//  Transcription state & helpers
+// ══════════════════════════════════════════════
+let xcProvider = 'groq';
+let xcFile = null;
+
+const XC_PROVIDERS = {
+  groq:   { label: 'Groq key', placeholder: 'gsk_...', hint: 'Same key as translation if using Groq', validate: v => v.startsWith('gsk_') && v.length > 20 },
+  openai: { label: 'OpenAI key', placeholder: 'sk-...', hint: 'Get key: platform.openai.com — $0.006/min', validate: v => (v.startsWith('sk-') || v.startsWith('sk-proj-')) && v.length > 20 },
+};
+
+function setXcProvider(id) {
+  xcProvider = id;
+  $('xc-pvdr-groq').className  = 'pvdr-btn' + (id === 'groq'   ? ' active' : '');
+  $('xc-pvdr-openai').className = 'pvdr-btn' + (id === 'openai' ? ' active' : '');
+  const cfg = XC_PROVIDERS[id];
+  $('xcKeyLabel').textContent   = cfg.label;
+  $('xcApiKey').placeholder     = cfg.placeholder;
+  $('xcKeyHint').textContent    = cfg.hint;
+  $('xcApiKey').value = '';
+  $('xcDot').className = 'xc-dot';
+  updateXcBtn();
+}
+
+$('xcApiKey').addEventListener('input', () => {
+  const v = $('xcApiKey').value.trim();
+  const ok = XC_PROVIDERS[xcProvider]?.validate(v) ?? (v.length > 20);
+  $('xcDot').className = 'xc-dot' + (ok ? ' ok' : '');
+  updateXcBtn();
+});
+
+function updateXcBtn() {
+  const hasKey  = XC_PROVIDERS[xcProvider]?.validate($('xcApiKey').value.trim()) ?? false;
+  const hasFile = !!xcFile;
+  $('xcBtn').disabled = !(hasKey && hasFile);
+}
+
+function setXcStatus(msg, type) {
+  $('xcStatus').textContent  = msg;
+  $('xcStatus').className    = 'xc-status' + (type ? ' ' + type : '');
+}
+
+// ── Drop zone for audio/video ──
+const xcDrop = $('xcDrop');
+xcDrop.addEventListener('click',    () => $('xcFileInput').click());
+xcDrop.addEventListener('dragover', e  => { e.preventDefault(); xcDrop.classList.add('drag'); });
+xcDrop.addEventListener('dragleave',()  => xcDrop.classList.remove('drag'));
+xcDrop.addEventListener('drop', e => {
+  e.preventDefault(); xcDrop.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) setXcFile(f);
+});
+$('xcFileInput').addEventListener('change', e => {
+  if (e.target.files[0]) setXcFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+function setXcFile(f) {
+  xcFile = f;
+  const mb = (f.size / 1024 / 1024).toFixed(1);
+  const info = $('xcFileInfo');
+  info.style.display = '';
+  info.innerHTML =
+    '<div class="xc-file-row">' +
+      '<span class="xc-file-name">' + escHtml(f.name) + '</span>' +
+      '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + mb + ' MB</span>' +
+      '<span class="xc-file-rm" onclick="clearXcFile()" title="Remove">×</span>' +
+    '</div>';
+  xcDrop.style.display = 'none';
+  if (f.size > 25 * 1024 * 1024) {
+    setXcStatus('Warning: file exceeds 25MB — Groq may reject it. Try OpenAI or trim the file.');
+  } else {
+    setXcStatus('');
+  }
+  $('xcProgressFill').style.width = '0%';
+  updateXcBtn();
+}
+
+function clearXcFile() {
+  xcFile = null;
+  $('xcFileInfo').style.display = 'none';
+  xcDrop.style.display = '';
+  setXcStatus('');
+  $('xcProgressFill').style.width = '0%';
+  updateXcBtn();
+}
+
+// ══════════════════════════════════════════════
+//  Transcription engine
+// ══════════════════════════════════════════════
+async function startTranscription() {
+  if (!xcFile) return;
+  const key = $('xcApiKey').value.trim();
+  if (!key) { setXcStatus('Enter a Whisper API key', 'err'); return; }
+
+  const btn = $('xcBtn');
+  btn.disabled = true;
+  $('xcProgressFill').style.width = '30%';
+  setXcStatus('Preparing audio…');
+
+  try {
+    // For video files, extract audio blob via MediaRecorder + OfflineAudioContext
+    let audioBlob = xcFile;
+    const isVideo = xcFile.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)$/i.test(xcFile.name);
+
+    if (isVideo) {
+      setXcStatus('Extracting audio from video…');
+      audioBlob = await extractAudioFromVideo(xcFile);
+      $('xcProgressFill').style.width = '50%';
+    }
+
+    setXcStatus('Sending to Whisper…');
+    $('xcProgressFill').style.width = '65%';
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, xcFile.name.replace(/\.[^.]+$/, '.mp3'));
+    formData.append('model', xcProvider === 'groq' ? 'whisper-large-v3' : 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+    formData.append('timestamp_granularities[]', 'segment');
+
+    const lang = $('xcSourceLang').value;
+    if (lang !== 'auto') formData.append('language', lang);
+
+    const endpoint = xcProvider === 'groq'
+      ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+      : 'https://api.openai.com/v1/audio/transcriptions';
+
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + key },
+      body: formData
+    });
+
+    $('xcProgressFill').style.width = '85%';
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'HTTP ' + resp.status);
+    }
+
+    const data = await resp.json();
+    $('xcProgressFill').style.width = '100%';
+
+    // Convert Whisper segments → subtitle objects
+    const segments = data.segments || [];
+    if (!segments.length) throw new Error('No segments returned — file may be silent or unsupported');
+
+    const subs = segments.map((seg, i) => ({
+      index:  i + 1,
+      start:  secToSrt(seg.start),
+      end:    secToSrt(seg.end),
+      text:   seg.text.trim()
+    }));
+
+    // Load into main app
+    subtitles    = subs;
+    translations = {};
+    activeTab    = 'source';
+    $('translateBtn').disabled = false;
+    $('clearBtn').disabled     = false;
+    $('exportBtn').disabled    = true;
+    rebuildTabs();
+    renderCurrentView();
+    setXcStatus(subs.length + ' subtitles transcribed ✓', 'ok');
+    // Switch to import tab to show the result
+    switchImportTab('import');
+
+  } catch(e) {
+    setXcStatus('Error: ' + e.message, 'err');
+    $('xcProgressFill').style.width = '0%';
+  }
+
+  btn.disabled = false;
+  updateXcBtn();
+}
+
+// ── Extract audio from video using Web Audio API ──
+async function extractAudioFromVideo(videoFile) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(videoFile);
+    const audio = new Audio();
+    audio.src = url;
+    audio.addEventListener('loadedmetadata', async () => {
+      try {
+        const duration = audio.duration;
+        const sampleRate = 16000; // Whisper works well at 16kHz
+        const ctx = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
+        const src = ctx.createBufferSource();
+
+        // Decode via AudioContext first
+        const arrayBuf = await videoFile.arrayBuffer();
+        const decoded  = await ctx.decodeAudioData(arrayBuf).catch(() => null);
+
+        if (!decoded) {
+          // Fallback: send original file directly
+          URL.revokeObjectURL(url);
+          resolve(videoFile);
+          return;
+        }
+
+        src.buffer = decoded;
+        src.connect(ctx.destination);
+        src.start(0);
+        const rendered = await ctx.startRendering();
+
+        // Encode to WAV
+        const wav = audioBufferToWav(rendered);
+        URL.revokeObjectURL(url);
+        resolve(new Blob([wav], { type: 'audio/wav' }));
+      } catch(e) {
+        URL.revokeObjectURL(url);
+        // Fallback: try sending the original
+        resolve(videoFile);
+      }
+    });
+    audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(videoFile); });
+  });
+}
+
+// ── Minimal WAV encoder ──
+function audioBufferToWav(buffer) {
+  const numChannels = 1;
+  const sampleRate  = buffer.sampleRate;
+  const samples     = buffer.getChannelData(0);
+  const dataLength  = samples.length * 2;
+  const wavBuffer   = new ArrayBuffer(44 + dataLength);
+  const view        = new DataView(wavBuffer);
+
+  function ws(off, str) { for (let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); }
+  function wu32(off, v) { view.setUint32(off, v, true); }
+  function wu16(off, v) { view.setUint16(off, v, true); }
+
+  ws(0,'RIFF'); wu32(4, 36+dataLength); ws(8,'WAVE');
+  ws(12,'fmt '); wu32(16,16); wu16(20,1); wu16(22,numChannels);
+  wu32(24,sampleRate); wu32(28,sampleRate*numChannels*2); wu16(32,numChannels*2); wu16(34,16);
+  ws(36,'data'); wu32(40,dataLength);
+
+  let off = 44;
+  for (let i=0; i<samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
+    off += 2;
+  }
+  return wavBuffer;
+}
+
+// ── Seconds → SRT timecode ──
+function secToSrt(sec) {
+  const h  = Math.floor(sec / 3600);
+  const m  = Math.floor((sec % 3600) / 60);
+  const s  = Math.floor(sec % 60);
+  const ms = Math.round((sec % 1) * 1000);
+  return pad(h)+':'+pad(m)+':'+pad(s)+','+String(ms).padStart(3,'0');
 }
 
 // Init
