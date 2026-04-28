@@ -6,7 +6,21 @@
 <title>sub.translate — Subtitle Translator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
+/* ── Auth / Login screen ── */
+.login-screen{position:fixed;inset:0;background:var(--bg0);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+.login-box{display:flex;flex-direction:column;align-items:center;gap:20px;padding:48px 40px;background:var(--bg1);border:1px solid var(--border2);border-radius:14px;width:340px}
+.login-logo{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--accent);letter-spacing:.04em}
+.login-logo span{color:var(--text3)}
+.login-title{font-size:16px;font-weight:500;color:var(--text);margin-top:-6px}
+.login-sub{font-size:12px;color:var(--text3);text-align:center;line-height:1.5}
+.login-domain{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:10px;font-family:var(--mono);font-size:11px;color:#8ba8ff;margin-top:-4px}
+.auth-error{font-size:12px;color:var(--red);text-align:center;line-height:1.5;padding:8px 12px;background:var(--red-dim);border:1px solid #5a1a1a;border-radius:6px;width:100%}
+.login-user{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text2);width:100%}
+.login-user-email{flex:1;font-family:var(--mono);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.signout-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;font-family:var(--sans);padding:2px 6px;border-radius:4px;transition:all .15s}
+.signout-btn:hover{color:var(--red);background:var(--red-dim)}
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg0:#0e0f11;--bg1:#16181c;--bg2:#1e2026;--bg3:#262830;
@@ -226,7 +240,22 @@ input[type=file]{display:none}
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ══════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">sub<span>.</span>translate</div>
+    <div class="login-title">Studio Access</div>
+    <div class="login-sub">Sign in with your organisation account</div>
+    <div class="login-domain">@keweke.com</div>
+    <div id="googleBtnContainer"></div>
+    <div id="authError" class="auth-error" style="display:none"></div>
+  </div>
+</div>
+
+<div id="mainApp" class="app" style="display:none">
 
 <!-- ══════════════════════════════════════════════
      SETTINGS MODAL
@@ -544,9 +573,94 @@ input[type=file]{display:none}
 </div><!-- /main -->
 </div><!-- /app -->
 
+</div><!-- /mainApp -->
+
 <!-- SheetJS for XLSX read/write -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
+// ══════════════════════════════════════════════════════════════
+//  AUTH — Google Sign-In restricted to @keweke.com
+// ══════════════════════════════════════════════════════════════
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // ← replace after setup
+const ALLOWED_DOMAIN   = 'keweke.com';
+const AUTH_KEY         = 'sub_translate_auth';
+
+function checkAuth() {
+  try {
+    const stored = sessionStorage.getItem(AUTH_KEY);
+    if (stored) {
+      const { email, exp } = JSON.parse(stored);
+      if (email.endsWith('@' + ALLOWED_DOMAIN) && Date.now() / 1000 < exp) {
+        showApp(email); return;
+      }
+    }
+  } catch {}
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  // Render Google button once GIS is ready
+  if (window.google?.accounts?.id) initGoogleAuth();
+  else window.addEventListener('load', initGoogleAuth);
+}
+
+function initGoogleAuth() {
+  if (!window.google?.accounts?.id) {
+    document.getElementById('authError').textContent = 'Could not load Google Sign-In. Check your connection.';
+    document.getElementById('authError').style.display = 'block';
+    return;
+  }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
+  google.accounts.id.renderButton(
+    document.getElementById('googleBtnContainer'),
+    { theme: 'filled_black', size: 'large', shape: 'rectangular', text: 'signin_with', width: 260 }
+  );
+  google.accounts.id.prompt();
+}
+
+function handleCredentialResponse(response) {
+  try {
+    // Decode JWT payload (base64url)
+    const b64 = response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const { email, exp, name } = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    if (email && email.endsWith('@' + ALLOWED_DOMAIN)) {
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, exp, name }));
+      showApp(email);
+    } else {
+      const err = document.getElementById('authError');
+      err.textContent = `Access restricted to @${ALLOWED_DOMAIN} accounts. You signed in as: ${email}`;
+      err.style.display = 'block';
+      google.accounts.id.disableAutoSelect();
+    }
+  } catch(e) {
+    const err = document.getElementById('authError');
+    err.textContent = 'Authentication error: ' + e.message;
+    err.style.display = 'block';
+  }
+}
+
+function showApp(email) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  // Show user badge in topbar
+  const topbar = document.querySelector('.topbar');
+  if (topbar && !document.getElementById('userBadge')) {
+    const badge = document.createElement('div');
+    badge.id = 'userBadge';
+    badge.className = 'login-user';
+    badge.innerHTML = `<span class="login-user-email">${email}</span><button class="signout-btn" onclick="signOut()">Sign out</button>`;
+    topbar.appendChild(badge);
+  }
+}
+
+function signOut() {
+  sessionStorage.removeItem(AUTH_KEY);
+  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+  location.reload();
+}
+
 // ══════════════════════════════════════════════════════════════
 //  EMBEDDED API KEY & SETTINGS
 // ══════════════════════════════════════════════════════════════
@@ -1539,6 +1653,7 @@ function secToSrt(sec) {
 // ══════════════════════════════════════════════════════════════
 rebuildTabs();
 renderCurrentView();
+checkAuth();
 </script>
 </body>
 </html>
