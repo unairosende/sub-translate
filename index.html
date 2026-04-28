@@ -303,6 +303,42 @@ input[type=file]{display:none}
 .pvdr-btn.active .pvdr-rpm{color:var(--accent-ink)}
 .model-select-wrap{margin-top:6px}
 
+/* ── Project title area ── */
+.header-project{display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;flex:1;max-width:260px}
+.project-name{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;border-radius:4px;padding:1px 4px;margin:-1px -4px;outline:none;transition:background .1s;border:none;background:transparent;font-family:var(--sans);width:100%}
+.project-name:hover{background:var(--line-2)}
+.project-name:focus{background:var(--line-2)}
+.project-meta-line{font-size:11px;color:var(--ink-3);display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;padding:0 4px}
+.project-saved-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
+
+/* ── Language pills in header ── */
+.header-langs{display:flex;align-items:center;gap:3px;flex-shrink:0;max-width:240px;overflow:hidden}
+.lang-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 5px;border-radius:999px;font-size:11.5px;font-weight:500;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);cursor:pointer;transition:all .12s;flex-shrink:0}
+.lang-pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.lang-pill:hover:not(.active){border-color:var(--ink-3)}
+.lang-pill-flag{width:18px;height:18px;border-radius:50%;background:var(--line-2);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--mono);font-weight:600;flex-shrink:0}
+.lang-pill.active .lang-pill-flag{background:var(--accent);color:white}
+.lang-arrow{color:var(--ink-3);font-size:11px;flex-shrink:0}
+
+/* ── Export popup ── */
+.export-popup-wrap{position:relative}
+.export-popup{position:absolute;top:calc(100% + 6px);right:0;width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(22,20,15,.12);z-index:500;display:none}
+.export-popup.open{display:block}
+.exp-sec{padding:10px 12px 12px}
+.exp-sec+.exp-sec{border-top:1px solid var(--line)}
+.exp-sec-label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.exp-row{display:flex;gap:6px;align-items:center}
+.exp-sel{flex:1;height:28px;padding:3px 22px 3px 8px;font-size:12px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23918a82'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;cursor:pointer;font-family:var(--sans)}
+.exp-btn{height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 12px/1 var(--sans);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .12s}
+.exp-btn:hover{background:var(--line-2)}
+.exp-btn:disabled{opacity:.4;cursor:not-allowed}
+.exp-btn.accent{background:var(--accent);color:white;border-color:var(--accent)}
+.exp-btn.accent:hover{filter:brightness(1.05)}
+
+/* ── Split button on cards ── */
+.split-btn{display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 6px;border-radius:5px;font:500 10.5px/1 var(--sans);cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink-3);white-space:nowrap;transition:all .12s}
+.split-btn:hover{background:var(--line-2);color:var(--ink-2)}
+
 /* ── Command palette ── */
 .cmd-overlay{position:fixed;inset:0;background:rgba(22,20,15,.2);backdrop-filter:blur(4px);display:flex;justify-content:center;padding-top:80px;z-index:2000}
 .cmd-box{width:540px;max-height:calc(100vh - 120px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(22,20,15,.16)}
@@ -350,7 +386,7 @@ input[type=file]{display:none}
       <div class="sg-title">Output Format</div>
       <div class="sg-row">
         <span class="sg-label">Max chars/line — Horizontal</span>
-        <input class="sg-input" type="number" id="s-maxH" min="10" max="120" value="42">
+        <input class="sg-input" type="number" id="s-maxH" min="10" max="120" value="46">
       </div>
       <div class="sg-row">
         <span class="sg-label">Max chars/line — Vertical</span>
@@ -633,38 +669,12 @@ input[type=file]{display:none}
       </div>
     </div>
     <div class="limit-box" id="limitBox">
-      <b>Max chars/line:</b> 42<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> off
+      <b>Max chars/line:</b> 46<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> off
     </div>
   </div>
 
-  <!-- ── AI Settings ── -->
-  <div class="s-sec">
-    <div class="s-title">AI Settings</div>
-    <div class="toggle-row">
-      <span class="toggle-label">Allow rephrase to fit length</span>
-      <label class="toggle">
-        <input type="checkbox" id="allowRephrase">
-        <div class="toggle-track"></div>
-        <div class="toggle-thumb"></div>
-      </label>
-    </div>
-    <div style="font-size:10.5px;color:var(--ink-3);line-height:1.5;margin-top:4px">
-      Off: only reflows line breaks. On: AI may shorten or rephrase.
-    </div>
-  </div>
-
-  <!-- ── Export all languages ── -->
-  <div class="s-sec">
-    <div class="s-title">Export all languages</div>
-    <select class="select" id="exportAllFormat" style="margin-bottom:8px">
-      <option value="csv">CSV</option>
-      <option value="xlsx">XLSX</option>
-    </select>
-    <button class="btn btn-ghost" id="exportAllBtn" onclick="exportAllTranslations()" disabled style="width:100%">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
-      Export all translations
-    </button>
-  </div>
+  <!-- hidden: allowRephrase kept in DOM for JS compatibility but always true -->
+  <input type="checkbox" id="allowRephrase" checked style="display:none">
 
 </div><!-- /source-panel -->
 
@@ -675,25 +685,57 @@ input[type=file]{display:none}
 
   <!-- ── App header ── -->
   <div class="app-header">
-    <div class="header-title">sub<span>·translate</span></div>
+    <!-- Project title + meta -->
+    <div class="header-project">
+      <input class="project-name" id="projectName" value="Untitled project" spellcheck="false"
+        onchange="saveStateLocally()" oninput="saveStateLocally()">
+      <div class="project-meta-line" id="projectMeta">
+        <span class="project-saved-dot" id="savedDot"></span>
+        <span id="projectMetaText">No subtitles loaded</span>
+      </div>
+    </div>
     <div class="header-divider"></div>
-    <span class="header-meta" id="headerMeta">Studio</span>
+    <!-- Language pills -->
+    <div class="header-langs" id="headerLangs"></div>
+    <!-- Search -->
     <div class="header-search" onclick="openCommandPalette()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;color:var(--ink-3)"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg>
       <span class="header-search-ph">Search ⌘K</span>
       <span class="kbd">⌘K</span>
     </div>
     <div class="header-actions">
-      <select id="exportFormat" style="height:30px;width:72px;padding:4px 24px 4px 8px;font-size:12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23918a82'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 6px center;cursor:pointer;font-family:var(--sans)">
-        <option value="srt">SRT</option>
-        <option value="txt">TXT</option>
-        <option value="csv">CSV</option>
-        <option value="xlsx">XLSX</option>
-      </select>
-      <button class="btn" id="exportBtn" onclick="exportFile()" disabled>
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
-        Export
-      </button>
+      <!-- Export popup -->
+      <div class="export-popup-wrap" id="exportPopupWrap">
+        <button class="btn" id="exportBtn" onclick="toggleExportPopup(event)" disabled>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
+          Export
+          <svg width="10" height="10" viewBox="0 0 10 6" fill="currentColor" style="opacity:.5"><path d="M0 0l5 6 5-6z"/></svg>
+        </button>
+        <div class="export-popup" id="exportPopup">
+          <div class="exp-sec">
+            <div class="exp-sec-label">Active tab</div>
+            <div class="exp-row">
+              <select class="exp-sel" id="exportFormat">
+                <option value="srt">SRT</option>
+                <option value="txt">TXT</option>
+                <option value="csv">CSV</option>
+                <option value="xlsx">XLSX</option>
+              </select>
+              <button class="exp-btn accent" onclick="exportFile();closeExportPopup()">Download</button>
+            </div>
+          </div>
+          <div class="exp-sec">
+            <div class="exp-sec-label">All languages</div>
+            <div class="exp-row">
+              <select class="exp-sel" id="exportAllFormat">
+                <option value="csv">CSV</option>
+                <option value="xlsx">XLSX</option>
+              </select>
+              <button class="exp-btn" id="exportAllBtn" onclick="exportAllTranslations();closeExportPopup()" disabled>Download</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="btn btn-accent" id="translateBtn" onclick="startTranslation()" disabled>
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
         Translate
@@ -854,7 +896,7 @@ function signOut() {
 //  SETTINGS
 // ══════════════════════════════════════════════════════════════
 let settings = {
-  maxCharsH:          42,
+  maxCharsH:          46,
   maxCharsV:          32,
   maxLinesPerSub:      2,
   elModel:            'scribe_v1',
@@ -1064,12 +1106,13 @@ function switchToTab(lang) {
   activeTab=lang;
   // Source tab is always exportable when subtitles exist
   $('exportBtn').disabled = (lang==='source'?!subtitles.length:!translations[lang]);
-  rebuildTabs(); renderCurrentView();
+  rebuildTabs(); renderCurrentView(); updateHeaderLangs();
 }
 function closeTab(lang) {
   delete translations[lang]; delete backTranslations[lang];
   if(activeTab===lang) activeTab='source';
   rebuildTabs(); updateExportAllBtn(); renderCurrentView();
+  updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1097,6 +1140,8 @@ function parseContent(text, filename) {
   const mode=hint!=='auto'?hint:ext;
   subtitles = mode==='csv'?parseCSV(text):mode==='txt'?parseTXT(text):parseSRT(text);
   translations={}; backTranslations={}; activeTab='source';
+  const nameEl=$('projectName');
+  if(nameEl&&filename&&filename!=='pasted.srt'){const base=filename.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');if(base)nameEl.value=base;}
   afterLoad();
 }
 
@@ -1118,6 +1163,8 @@ function parseXLSXBuffer(buf, filename) {
         return {index:i+1,start:'00:00:00,000',end:'00:00:01,000',text:String(r[0]||'').trim()};
       }).filter(s=>s.text);
       translations={}; backTranslations={}; activeTab='source';
+      const nameElX=$('projectName');
+      if(nameElX&&filename){const base=filename.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');if(base)nameElX.value=base;}
       afterLoad();
     }
   } catch(e) { setStatus('XLSX parse error: '+e.message,'err'); }
@@ -1181,6 +1228,7 @@ function afterLoad() {
   $('clearBtn').disabled     = !subtitles.length;
   updateExportAllBtn();
   rebuildTabs(); renderCurrentView(); setStatus('');
+  updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
 }
 
 // ── Format parsers ─────────────────────────────────────────
@@ -1281,12 +1329,15 @@ function makeCard(sub,editable,lang) {
   const pct=Math.min(100,Math.round(longest/maxLen()*100));
   const card=el('div','sub-card'+(st==='error'?' error':st==='warn'?' warn':'')+(editable?' editable':''));
   card.dataset.idx=sub.index; card.dataset.lang=lang;
+  const splitBtnHtml = lang==='source'
+    ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`
+    : '';
   card.innerHTML=
     `<div class="sub-idx">#${sub.index}</div>`+
     `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>`+
     (editable?`<svg class="edit-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`:'')+
     `<div class="sub-text">${escHtml(sub.text)}</div>`+
-    `<div class="sub-meta"><span class="sub-chars ${st==='ok'?'':st}">${longest}/${maxLen()}</span><div class="char-bar"><div class="char-bar-fill ${st==='ok'?'':st}" style="width:${pct}%"></div></div></div>`;
+    `<div class="sub-meta"><span class="sub-chars ${st==='ok'?'':st}">${longest}/${maxLen()}</span><div class="char-bar"><div class="char-bar-fill ${st==='ok'?'':st}" style="width:${pct}%"></div></div>${splitBtnHtml}</div>`;
   if(editable) card.addEventListener('click',()=>openEdit(card,sub,lang));
 
   if(lang!=='source'&&backTranslations[lang]) {
@@ -1336,6 +1387,7 @@ function commitEdit(card) {
   }
   closeEditCard(card,newText,lang);
   updatePills(lang==='source'?subtitles:getFinalSubs(lang));
+  saveStateLocally();
 }
 function cancelEdit(card,orig,lang) { currentEditCard=null; closeEditCard(card,orig,lang); }
 function closeEditCard(card,text,lang) {
@@ -1523,6 +1575,7 @@ async function startTranslation() {
   setTranslateBtn(false); hideProgress();
   setStatus('Done — '+result.length+' subtitles','ok');
   updateExportAllBtn(); rebuildTabs(); renderCurrentView();
+  updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1699,6 +1752,7 @@ function clearAll() {
   $('translateBtn').disabled=true; $('exportBtn').disabled=true; $('clearBtn').disabled=true;
   $('progressFill').style.width='0%'; updateExportAllBtn(); setStatus('');
   rebuildTabs(); renderCurrentView();
+  updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1845,10 +1899,180 @@ function secToSrt(sec) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  PROJECT TITLE & HEADER META
+// ══════════════════════════════════════════════════════════════
+function getProjectName() {
+  return ($('projectName')?.value || '').trim() || 'Untitled project';
+}
+
+function updateHeaderMeta() {
+  const n = subtitles.length;
+  const metaEl = $('projectMetaText');
+  if (!metaEl) return;
+  if (!n) { metaEl.textContent = 'No subtitles loaded'; return; }
+  // Compute total duration from last subtitle end timecode
+  let dur = '';
+  const last = subtitles[subtitles.length - 1];
+  if (last?.end) {
+    const ms = tcToMs(last.end);
+    const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+    dur = ` · ${pad(m)}:${pad(s)} runtime`;
+  }
+  const langs = Object.keys(translations);
+  const langStr = langs.length ? ` · ${langs.length} translation${langs.length > 1 ? 's' : ''}` : '';
+  metaEl.textContent = `${n} cues${dur}${langStr}`;
+}
+
+function markSaved() {
+  const dot = $('savedDot');
+  if (dot) { dot.style.background = 'var(--ok)'; dot.title = 'Saved'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LANGUAGE PILLS IN HEADER
+// ══════════════════════════════════════════════════════════════
+function updateHeaderLangs() {
+  const el = $('headerLangs');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!subtitles.length) return;
+
+  const srcLang = $('srcLangSelect')?.value || 'Source';
+  const srcCode = srcLang === 'Auto-detect' ? 'SRC' : (LANG_CODES[srcLang] || srcLang.slice(0,2).toUpperCase());
+  el.appendChild(makeLangPill(srcCode, activeTab === 'source', () => switchToTab('source')));
+
+  const langs = Object.keys(translations);
+  if (langs.length) {
+    const arrow = document.createElement('span');
+    arrow.className = 'lang-arrow'; arrow.textContent = '→';
+    el.appendChild(arrow);
+    langs.forEach(lang => {
+      const code = LANG_CODES[lang] || lang.slice(0,2).toUpperCase();
+      el.appendChild(makeLangPill(code, activeTab === lang, () => switchToTab(lang)));
+    });
+  }
+}
+
+function makeLangPill(code, active, onClick) {
+  const pill = document.createElement('button');
+  pill.className = 'lang-pill' + (active ? ' active' : '');
+  pill.style.cssText = 'border:none;cursor:pointer;font-family:var(--sans)';
+  const flag = document.createElement('span');
+  flag.className = 'lang-pill-flag';
+  flag.textContent = code.slice(0,2);
+  const label = document.createElement('span');
+  label.textContent = code;
+  pill.appendChild(flag); pill.appendChild(label);
+  pill.onclick = onClick;
+  return pill;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EXPORT POPUP
+// ══════════════════════════════════════════════════════════════
+function toggleExportPopup(e) {
+  e.stopPropagation();
+  const popup = $('exportPopup');
+  popup.classList.toggle('open');
+}
+function closeExportPopup() {
+  $('exportPopup')?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!$('exportPopupWrap')?.contains(e.target)) closeExportPopup();
+});
+
+// ══════════════════════════════════════════════════════════════
+//  SPLIT SUBTITLE
+// ══════════════════════════════════════════════════════════════
+function splitSubtitle(idx) {
+  const src = subtitles.find(s => s.index === idx);
+  if (!src) return;
+
+  function splitEntry(sub) {
+    const mid = midTimecode(sub.start, sub.end);
+    const words = sub.text.replace(/\n/g, ' ').split(' ').filter(Boolean);
+    const half = Math.ceil(words.length / 2);
+    const textA = words.slice(0, half).join(' ');
+    const textB = words.slice(half).join(' ') || textA;
+    return [
+      { ...sub, end: mid, text: textA },
+      { ...sub, start: mid, text: textB }
+    ];
+  }
+
+  function insertSplit(arr, idx) {
+    const pos = arr.findIndex(s => s.index === idx);
+    if (pos < 0) return arr;
+    const [a, b] = splitEntry(arr[pos]);
+    const next = [...arr.slice(0, pos), a, b, ...arr.slice(pos + 1)];
+    return next.map((s, i) => ({ ...s, index: i + 1 }));
+  }
+
+  subtitles = insertSplit(subtitles, idx);
+  Object.keys(translations).forEach(lang => {
+    if (translations[lang]) translations[lang] = insertSplit(translations[lang], idx);
+  });
+
+  rebuildTabs(); renderCurrentView(); updateHeaderMeta(); saveStateLocally();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LOCAL SAVE / LOAD
+// ══════════════════════════════════════════════════════════════
+const SAVE_KEY = 'sub_translate_project';
+
+function saveStateLocally() {
+  try {
+    const state = {
+      v: 2,
+      projectName: getProjectName(),
+      subtitles,
+      translations,
+      settings,
+      srcLang: $('srcLangSelect')?.value,
+      tgtLang: $('langSelect')?.value,
+      outputMode,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    markSaved();
+  } catch(e) { /* storage full or unavailable */ }
+}
+
+function loadStateLocally() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    if (!state?.v) return false;
+
+    if (state.projectName && $('projectName')) $('projectName').value = state.projectName;
+    if (Array.isArray(state.subtitles) && state.subtitles.length) {
+      subtitles = state.subtitles;
+      translations = state.translations || {};
+      if (state.settings) Object.assign(settings, state.settings);
+      if (state.srcLang && $('srcLangSelect')) $('srcLangSelect').value = state.srcLang;
+      if (state.tgtLang && $('langSelect')) $('langSelect').value = state.tgtLang;
+      if (state.outputMode) {
+        outputMode = state.outputMode;
+        $('opt-h').className = 'radio-opt' + (outputMode === 'horizontal' ? ' active' : '');
+        $('opt-v').className = 'radio-opt' + (outputMode === 'vertical'   ? ' active' : '');
+      }
+      activeTab = 'source';
+      afterLoad();
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════════
 rebuildTabs();
-renderCurrentView();
+updateHeaderLangs();
+updateHeaderMeta();
+if (!loadStateLocally()) renderCurrentView();
 checkAuth();
 </script>
 </body>
