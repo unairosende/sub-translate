@@ -270,7 +270,24 @@ input[type=file]{display:none}
 
       <div class="sg-sep"></div>
       <div class="sg-title">Translation</div>
-      <div class="sg-note">Translation uses the API key entered in the topbar and the Provider/Model selected in the sidebar.</div>
+      <div class="sg-note">Gemini is the default provider. The API key is embedded. Override below only if needed.</div>
+      <div class="sg-row">
+        <span class="sg-label">API Key override</span>
+        <input class="sg-input wide" type="password" id="s-transKey" placeholder="Leave blank → embedded key" autocomplete="off">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Provider</span>
+        <select class="sg-select" id="s-transProvider" onchange="onSettingsProviderChange()">
+          <option value="gemini">Gemini</option>
+          <option value="groq">Groq</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="mistral">Mistral</option>
+        </select>
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Model</span>
+        <select class="sg-select" id="s-transModel"></select>
+      </div>
 
     </div>
     <div class="modal-ft">
@@ -285,11 +302,6 @@ input[type=file]{display:none}
 ══════════════════════════════════════════════ -->
 <div class="topbar">
   <div class="logo">sub<span>.</span>translate</div>
-  <div class="api-row">
-    <span class="api-label" id="apiLabel">Gemini API key</span>
-    <input class="api-input" type="password" id="apiKey" placeholder="AIza…" autocomplete="off">
-    <div class="api-dot" id="apiDot"></div>
-  </div>
   <button class="icon-btn" onclick="openSettings()" title="Settings">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="8" cy="8" r="2.5"/>
@@ -470,29 +482,6 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- ── Provider ── -->
-  <div class="s-sec">
-    <div class="s-title">Provider</div>
-    <div class="provider-grid">
-      <div class="pvdr-btn active" id="pvdr-gemini"     onclick="setProvider('gemini')">
-        <span class="pvdr-name">Gemini</span><span class="pvdr-rpm">15 RPM · 1K/day</span>
-      </div>
-      <div class="pvdr-btn" id="pvdr-groq"          onclick="setProvider('groq')">
-        <span class="pvdr-name">Groq</span><span class="pvdr-rpm">30 RPM · 14K/day</span>
-      </div>
-      <div class="pvdr-btn" id="pvdr-openrouter"    onclick="setProvider('openrouter')">
-        <span class="pvdr-name">OpenRouter</span><span class="pvdr-rpm">free models</span>
-      </div>
-      <div class="pvdr-btn" id="pvdr-mistral"       onclick="setProvider('mistral')">
-        <span class="pvdr-name">Mistral</span><span class="pvdr-rpm">1 RPM · free</span>
-      </div>
-    </div>
-    <div class="model-select-wrap">
-      <select class="select" id="modelSelect" style="font-size:11px"></select>
-    </div>
-    <div style="margin-top:6px;font-size:10px;color:var(--text3);line-height:1.6" id="providerHint"></div>
-  </div>
-
   <!-- ── Translate ── -->
   <div class="s-sec">
     <div class="s-title">Translate</div>
@@ -562,13 +551,17 @@ input[type=file]{display:none}
 //  EMBEDDED API KEY & SETTINGS
 // ══════════════════════════════════════════════════════════════
 const ELEVENLABS_KEY_DEFAULT = 'b6d439c1cf0d397826e00f772337d906df26700cca7f47b42c618767331c124b';
+const GEMINI_KEY_DEFAULT     = '';   // ← paste your Gemini key here
 
 let settings = {
-  maxCharsH:     42,
-  maxCharsV:     32,
-  maxLinesPerSub: 2,
-  elKeyOverride: '',
-  elModel:       'scribe_v1',
+  maxCharsH:          42,
+  maxCharsV:          32,
+  maxLinesPerSub:      2,
+  elKeyOverride:      '',
+  elModel:            'scribe_v1',
+  translationKeyOverride: '',
+  translationProvider:    'gemini',
+  translationModel:       'gemini-2.5-flash-lite',
 };
 
 // ── App state ──────────────────────────────────────────────
@@ -588,25 +581,46 @@ const $ = id => document.getElementById(id);
 //  SETTINGS MODAL
 // ══════════════════════════════════════════════════════════════
 function openSettings() {
-  $('s-maxH').value    = settings.maxCharsH;
-  $('s-maxV').value    = settings.maxCharsV;
-  $('s-maxLines').value = settings.maxLinesPerSub;
-  $('s-elKey').value   = settings.elKeyOverride;
-  $('s-elModel').value = settings.elModel;
+  $('s-maxH').value         = settings.maxCharsH;
+  $('s-maxV').value         = settings.maxCharsV;
+  $('s-maxLines').value      = settings.maxLinesPerSub;
+  $('s-elKey').value         = settings.elKeyOverride;
+  $('s-elModel').value       = settings.elModel;
+  $('s-transKey').value      = settings.translationKeyOverride;
+  $('s-transProvider').value = settings.translationProvider;
+  populateSettingsModelSelect(settings.translationProvider);
+  $('s-transModel').value    = settings.translationModel;
   $('settingsModal').style.display = 'flex';
 }
 function closeSettings() {
   $('settingsModal').style.display = 'none';
 }
 function saveSettings() {
-  settings.maxCharsH      = Math.max(10, parseInt($('s-maxH').value)     || 42);
-  settings.maxCharsV      = Math.max(10, parseInt($('s-maxV').value)     || 32);
-  settings.maxLinesPerSub = Math.max(1,  parseInt($('s-maxLines').value) || 2);
-  settings.elKeyOverride  = $('s-elKey').value.trim();
-  settings.elModel        = $('s-elModel').value;
+  settings.maxCharsH              = Math.max(10, parseInt($('s-maxH').value)     || 42);
+  settings.maxCharsV              = Math.max(10, parseInt($('s-maxV').value)     || 32);
+  settings.maxLinesPerSub         = Math.max(1,  parseInt($('s-maxLines').value) || 2);
+  settings.elKeyOverride          = $('s-elKey').value.trim();
+  settings.elModel                = $('s-elModel').value;
+  settings.translationKeyOverride = $('s-transKey').value.trim();
+  settings.translationProvider    = $('s-transProvider').value;
+  settings.translationModel       = $('s-transModel').value;
+  activeProvider                  = settings.translationProvider;
+  updateProviderTiming();
   closeSettings();
   updateLimitBox();
   renderCurrentView();
+}
+function onSettingsProviderChange() {
+  populateSettingsModelSelect($('s-transProvider').value);
+}
+function populateSettingsModelSelect(provider) {
+  const sel = $('s-transModel'); sel.innerHTML = '';
+  (PROVIDERS[provider]?.models || PROVIDERS.gemini.models).forEach(m => {
+    const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; sel.appendChild(o);
+  });
+}
+function getTranslationKey() {
+  return settings.translationKeyOverride || GEMINI_KEY_DEFAULT;
 }
 function updateLimitBox() {
   $('limitBox').innerHTML =
@@ -665,30 +679,15 @@ const PROVIDERS = {
   },
 };
 
-function setProvider(id) {
-  activeProvider = id;
-  Object.keys(PROVIDERS).forEach(k => {
-    const b = $('pvdr-'+k); if (b) b.className = 'pvdr-btn'+(k===id?' active':'');
-  });
-  const cfg = PROVIDERS[id];
-  $('apiLabel').textContent     = cfg.label;
-  $('apiKey').placeholder       = cfg.placeholder;
-  $('apiKey').value             = '';
-  $('apiDot').className         = 'api-dot';
-  $('providerHint').textContent = cfg.hint;
-  const sel = $('modelSelect'); sel.innerHTML = '';
-  cfg.models.forEach(m => { const o=document.createElement('option'); o.value=m.id; o.textContent=m.name; sel.appendChild(o); });
-  updateProviderTiming();
-}
 function updateProviderTiming() {
   window._providerBatch = activeProvider==='mistral'?10:30;
   window._providerPause = activeProvider==='mistral'?65000:activeProvider==='gemini'?10000:5000;
 }
-$('apiKey').addEventListener('input', () => {
-  const v=($('apiKey').value||'').trim();
-  $('apiDot').className='api-dot'+(PROVIDERS[activeProvider]?.validate(v)?' ok':'');
-});
-setProvider('gemini');
+// Init provider from settings
+activeProvider = settings.translationProvider;
+updateProviderTiming();
+// Populate settings model select on first load
+document.addEventListener('DOMContentLoaded', () => populateSettingsModelSelect(settings.translationProvider));
 
 // ══════════════════════════════════════════════════════════════
 //  OUTPUT MODE
@@ -1140,7 +1139,7 @@ function midTimecode(a,b){return msToTc(Math.round((tcToMs(a)+tcToMs(b))/2));}
 //  UNIFIED PROVIDER CALL  (translation)
 // ══════════════════════════════════════════════════════════════
 async function callProvider(prompt,key,retries=3) {
-  const model=$('modelSelect').value;
+  const model = settings.translationModel || PROVIDERS[activeProvider]?.models[0]?.id;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   for(let attempt=0;attempt<retries;attempt++){
     try{
@@ -1176,8 +1175,8 @@ async function callProvider(prompt,key,retries=3) {
 //  TRANSLATION
 // ══════════════════════════════════════════════════════════════
 async function startTranslation() {
-  const key=($('apiKey').value||'').trim();
-  if(!key){setStatus('Enter an API key first','err');return;}
+  const key = getTranslationKey();
+  if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   if(!subtitles.length){setStatus('Import subtitles first','err');return;}
   const lang=getTargetLang(); if(!lang){setStatus('Enter a target language','err');return;}
   const srcLang=$('srcLangSelect').value;
@@ -1244,7 +1243,7 @@ async function fixOverlength() {
     toFix.forEach(s=>{const f=subs.find(x=>x.index===s.index);if(!f)return;const r=reflowText(f.text,limit);if(r!==f.text){f.text=r;fixed++;}});
     setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok'); renderCurrentView(); return;
   }
-  const key=($('apiKey').value||'').trim(); if(!key){setStatus('Enter an API key first','err');return;}
+  const key = getTranslationKey(); if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   fixBtn.disabled=true; fixBtn.innerHTML='<span class="suggest-spinner"></span> Fixing…';
   setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
   const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const BATCH=15; let fixed=0;
@@ -1295,7 +1294,7 @@ function wordDiff(source,backTrans) {
 async function startBackTranslation() {
   const lang=activeTab; if(!translations[lang]) return;
   if(backTranslations[lang]){delete backTranslations[lang];renderCurrentView();return;}
-  const key=($('apiKey').value||'').trim(); if(!key){setStatus('Enter an API key first','err');return;}
+  const key = getTranslationKey(); if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   const srcLangVal=$('srcLangSelect').value;
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
