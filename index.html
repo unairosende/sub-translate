@@ -149,13 +149,20 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .bt-btn:disabled{opacity:.4;cursor:not-allowed}
 .edit-hint{font-size:11px;color:var(--ink-3);margin-left:auto;font-style:italic}
 
+/* ── Top progress bar ── */
+.top-progress{height:3px;flex-shrink:0;overflow:hidden;opacity:0;transition:opacity .2s}
+.top-progress.active{opacity:1}
+.top-progress-fill{height:100%;background:var(--accent);transition:width .5s ease;width:0%;box-shadow:2px 0 8px oklch(0.66 0.16 28 / 0.5)}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.top-progress.indeterminate .top-progress-fill{width:40%!important;background:linear-gradient(90deg,var(--accent) 0%,oklch(0.78 0.14 28) 50%,var(--accent) 100%);background-size:200%;animation:shimmer 1.4s infinite linear}
+
 /* ── Status bar ── */
 .status-bar{height:38px;background:var(--panel);border-top:1px solid var(--line);padding:0 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .status-msg{font-size:11.5px;color:var(--ink-3);flex:1;line-height:1.4}
 .status-msg.err{color:oklch(0.42 0.16 25)}
 .status-msg.ok{color:oklch(0.36 0.11 155)}
-.progress-bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;width:120px;flex-shrink:0}
-.progress-fill{height:100%;background:var(--accent);transition:width .3s;width:0%}
+.progress-bar{display:none}
+.progress-fill{}
 
 /* ── Form select ── */
 .select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--ink);font-size:13px;font-family:var(--sans);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23918a82'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
@@ -693,6 +700,9 @@ input[type=file]{display:none}
       </button>
     </div>
   </div>
+
+  <!-- ── Top progress bar (shows during translate / fix / back-translate) ── -->
+  <div class="top-progress" id="topProgress"><div class="top-progress-fill" id="topProgressFill"></div></div>
 
   <!-- ── Sub-toolbar ── -->
   <div class="sub-toolbar">
@@ -1391,6 +1401,33 @@ function updatePills(subs) {
 function setStatus(msg,type) {
   $('statusMsg').textContent=msg; $('statusMsg').className='status-msg'+(type?' '+type:'');
 }
+
+// ── Top progress bar helpers ──────────────────────────────
+function showProgress(pct) {
+  const bar=$('topProgress'), fill=$('topProgressFill');
+  bar.classList.remove('indeterminate');
+  bar.classList.add('active');
+  fill.style.width=(pct==null?'0':pct)+'%';
+}
+function hideProgress() {
+  const bar=$('topProgress'), fill=$('topProgressFill');
+  fill.style.width='100%';
+  setTimeout(()=>{ bar.classList.remove('active'); fill.style.width='0%'; }, 500);
+}
+function showProgressIndeterminate() {
+  const bar=$('topProgress');
+  bar.classList.add('active','indeterminate');
+}
+
+// ── Translate button busy state ───────────────────────────
+const TRANSLATE_ICON = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>`;
+function setTranslateBtn(busy, label) {
+  const btn=$('translateBtn');
+  if(!btn) return;
+  btn.innerHTML = busy
+    ? `<span class="suggest-spinner"></span> ${label||'Translating…'}`
+    : TRANSLATE_ICON+' Translate';
+}
 function updateExportAllBtn() {
   $('exportAllBtn').disabled=Object.keys(translations).length===0;
 }
@@ -1453,7 +1490,8 @@ async function startTranslation() {
   const srcLang=$('srcLangSelect').value;
   const srcNote=srcLang!=='Auto-detect'?' from '+srcLang:'';
   $('translateBtn').disabled=true; $('exportBtn').disabled=true;
-  const fill=$('progressFill'); fill.style.width='0%'; setStatus('Translating…');
+  setTranslateBtn(true,'Translating…'); showProgress(0); setStatus('Translating…');
+  const fill={style:{width:''}}; // legacy no-op shim
   const snap=[...subtitles], result=[];
   const BATCH=window._providerBatch||30, PAUSE=window._providerPause||10000;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -1473,14 +1511,17 @@ async function startTranslation() {
       const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
-      setStatus(`Translating… ${Math.min(i+BATCH,snap.length)}/${snap.length}`);
-    }catch(e){setStatus('Error: '+e.message,'err');$('translateBtn').disabled=false;return;}
-    fill.style.width=Math.round((i+batch.length)/snap.length*100)+'%';
+      const done=Math.min(i+BATCH,snap.length);
+      setStatus(`Translating… ${done} / ${snap.length}`);
+      showProgress(Math.round(done/snap.length*100));
+      setTranslateBtn(true,`${done} / ${snap.length}`);
+    }catch(e){setStatus('Error: '+e.message,'err');$('translateBtn').disabled=false;setTranslateBtn(false);hideProgress();return;}
   }
 
   translations[lang]=result; activeTab=lang;
   $('exportBtn').disabled=false; $('translateBtn').disabled=false;
-  fill.style.width='100%'; setStatus('Done — '+result.length+' subtitles','ok');
+  setTranslateBtn(false); hideProgress();
+  setStatus('Done — '+result.length+' subtitles','ok');
   updateExportAllBtn(); rebuildTabs(); renderCurrentView();
 }
 
@@ -1515,7 +1556,7 @@ async function fixOverlength() {
     setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok'); renderCurrentView(); return;
   }
   fixBtn.disabled=true; fixBtn.innerHTML='<span class="suggest-spinner"></span> Fixing…';
-  setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
+  showProgress(0); setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
   const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const BATCH=15; let fixed=0;
   for(let i=0;i<toFix.length;i+=BATCH){
     if(i>0){for(let c=5;c>0;c--){setStatus(`Fixing… ${i}/${toFix.length} — next in ${c}s…`);await sleep(1000);}}
@@ -1526,11 +1567,11 @@ async function fixOverlength() {
       const raw=await callProvider(prompt,null,3);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g,'').trim());}catch{parsed=null;}
       if(Array.isArray(parsed)) batch.forEach((s,j)=>{if(parsed[j]!==undefined){const f=subs.find(x=>x.index===s.index);if(f){f.text=parsed[j];fixed++;}}});
-    }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';return;}
-    $('progressFill').style.width=Math.round((i+batch.length)/toFix.length*100)+'%';
+    }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';hideProgress();return;}
+    showProgress(Math.round((i+batch.length)/toFix.length*100));
   }
   setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok');
-  fixBtn.disabled=false; fixBtn.innerHTML=wandIcon+' Fix'; $('progressFill').style.width='0%';
+  fixBtn.disabled=false; fixBtn.innerHTML=wandIcon+' Fix'; hideProgress();
   renderCurrentView();
 }
 
@@ -1567,9 +1608,9 @@ async function startBackTranslation() {
   const srcLangVal=$('srcLangSelect').value;
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
-  setStatus(`Back-translating to ${srcLang}…`);
+  showProgress(0); setStatus(`Back-translating to ${srcLang}…`);
   const subs=translations[lang], BATCH=window._providerBatch||30, PAUSE=window._providerPause||10000;
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const fill=$('progressFill'); fill.style.width='0%';
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const result=[];
   for(let i=0;i<subs.length;i+=BATCH){
     if(i>0){for(let c=Math.round(PAUSE/1000);c>0;c--){setStatus(`Back-translating… ${i}/${subs.length} — next in ${c}s…`);await sleep(1000);}}
@@ -1582,12 +1623,13 @@ async function startBackTranslation() {
       const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
-      setStatus(`Back-translating… ${Math.min(i+BATCH,subs.length)}/${subs.length}`);
-    }catch(e){setStatus('Error: '+e.message,'err');btn.disabled=false;updateBtBtn();return;}
-    fill.style.width=Math.round((i+batch.length)/subs.length*100)+'%';
+      const done=Math.min(i+BATCH,subs.length);
+      setStatus(`Back-translating… ${done} / ${subs.length}`);
+      showProgress(Math.round(done/subs.length*100));
+    }catch(e){setStatus('Error: '+e.message,'err');btn.disabled=false;updateBtBtn();hideProgress();return;}
   }
-  backTranslations[lang]=result; fill.style.width='100%';
-  setStatus('Back-translation done — differences highlighted in cards','ok');
+  backTranslations[lang]=result;
+  hideProgress(); setStatus('Back-translation done — differences highlighted in cards','ok');
   btn.disabled=false; renderCurrentView();
 }
 
