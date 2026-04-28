@@ -21,8 +21,9 @@
 }
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:14px;display:flex;flex-direction:column}
-
 .app{display:flex;flex-direction:column;height:100vh}
+
+/* ── Topbar ── */
 .topbar{background:var(--bg1);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
 .logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);letter-spacing:.04em}
 .logo span{color:var(--text3)}
@@ -32,6 +33,32 @@ body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:1
 .api-input:focus{border-color:var(--accent)}
 .api-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
 .api-dot.ok{background:var(--green)}
+.icon-btn{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;line-height:1}
+.icon-btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+
+/* ── Settings modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal-box{background:var(--bg1);border:1px solid var(--border2);border-radius:10px;width:460px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hd{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:14px;font-weight:500;color:var(--text)}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;line-height:1;padding:0 4px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--bg3)}
+.modal-body{padding:18px 16px;overflow-y:auto;flex:1}
+.modal-body::-webkit-scrollbar{width:4px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.modal-ft{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+.sg-title{font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:10px}
+.sg-sep{height:1px;background:var(--border);margin:16px 0}
+.sg-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sg-label{font-size:12px;color:var(--text2);flex:1;min-width:0}
+.sg-input{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-family:var(--mono);font-size:12px;color:var(--text);width:72px;outline:none;text-align:center}
+.sg-input:focus{border-color:var(--accent)}
+.sg-input.wide{width:180px;text-align:left}
+.sg-select{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;color:var(--text);outline:none;cursor:pointer;width:180px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555a6e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sg-select:focus{border-color:var(--accent)}
+.sg-note{font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;padding:6px 8px;background:var(--bg2);border-radius:5px}
+
+/* ── Provider grid ── */
 .provider-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
 .pvdr-btn{padding:7px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--mono);color:var(--text2);cursor:pointer;text-align:center;transition:all .15s;line-height:1.3}
 .pvdr-btn:hover{border-color:var(--border2);color:var(--text)}
@@ -42,7 +69,7 @@ body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:1
 .model-select-wrap{margin-top:6px}
 .main{display:flex;flex:1;overflow:hidden}
 
-/* Sidebar */
+/* ── Sidebar ── */
 .sidebar{width:226px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
 .sidebar::-webkit-scrollbar{width:4px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -67,6 +94,7 @@ body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:1
 .btn-primary:disabled{opacity:.4;cursor:not-allowed}
 .btn-ghost{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
 .btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-ghost:disabled{opacity:.4;cursor:not-allowed}
 .btn-green{background:var(--green-dim);color:var(--green);border:1px solid #2a7a50}
 .btn-green:hover{background:#1f4a35}
 .btn-green:disabled{opacity:.4;cursor:not-allowed}
@@ -84,7 +112,7 @@ textarea.paste-area:focus{border-color:var(--accent)}
 textarea.paste-area::placeholder{color:var(--text3)}
 input[type=file]{display:none}
 
-/* Transcription */
+/* ── Transcription ── */
 .xc-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;cursor:pointer;border:2px dashed var(--border2);border-radius:8px;transition:all .2s;min-height:80px}
 .xc-drop:hover,.xc-drop.drag{border-color:var(--accent);background:var(--accent-dim)}
 .xc-drop-icon{font-size:22px;opacity:.4;line-height:1}
@@ -102,33 +130,37 @@ input[type=file]{display:none}
 .tab-sw-btn{flex:1;padding:5px 6px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:var(--sans);transition:all .15s;text-align:center}
 .tab-sw-btn.active{background:var(--bg3);color:var(--text)}
 .tab-sw-btn:hover:not(.active){color:var(--text2)}
-.xc-sep{height:1px;background:var(--border);margin:10px 0}
-.xc-key-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.xc-key-label{font-size:10px;color:var(--text3);white-space:nowrap}
-.xc-key-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;min-width:0}
-.xc-key-input:focus{border-color:var(--accent)}
-.xc-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
-.xc-dot.ok{background:var(--green)}
+.el-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--text3);font-family:var(--mono)}
+.el-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
 
-/* Center */
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.toggle-label{font-size:12px;color:var(--text2);flex:1;line-height:1.3}
+.toggle{position:relative;width:30px;height:17px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--border2);border-radius:17px;cursor:pointer;transition:all .2s}
+.toggle input:checked + .toggle-track{background:var(--accent-dim);border-color:var(--accent)}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--text3);transition:all .2s;pointer-events:none}
+.toggle input:checked ~ .toggle-thumb{left:15px;background:var(--accent)}
+.suggest-spinner{display:inline-block;width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Center ── */
 .center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-
-/* Language tabs bar */
-.lang-tabs-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 12px;display:flex;align-items:center;gap:0;flex-shrink:0;overflow-x:auto;min-height:38px}
+.lang-tabs-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 12px;display:flex;align-items:center;flex-shrink:0;overflow-x:auto;min-height:38px}
 .lang-tabs-bar::-webkit-scrollbar{height:0}
-.ltab{display:flex;align-items:center;gap:5px;padding:8px 12px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none}
+.ltab{display:flex;align-items:center;gap:5px;padding:8px 12px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none;font-family:var(--mono)}
 .ltab:hover{color:var(--text2)}
 .ltab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .ltab.src{font-family:var(--sans);color:var(--text2)}
 .ltab.src.active{color:var(--text);border-bottom-color:var(--border2)}
-.ltab{font-family:var(--mono)}
 .ltab-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 .ltab-x{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;line-height:1;transition:all .15s;font-family:sans-serif}
 .ltab-x:hover{background:var(--red-dim);color:var(--red)}
 .ltab-sep{width:1px;height:16px;background:var(--border);margin:0 6px;flex-shrink:0}
 .tabs-info{margin-left:auto;font-size:11px;color:var(--text3);padding-left:12px;flex-shrink:0;font-family:var(--mono)}
 
-/* View toolbar */
+/* ── View toolbar ── */
 .view-toolbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .vbtn{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:var(--sans);transition:all .15s}
 .vbtn.active{background:var(--bg3);color:var(--text)}
@@ -142,18 +174,8 @@ input[type=file]{display:none}
 .fix-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid #5a1a1a;background:var(--red-dim);color:var(--red);font-family:var(--sans);transition:all .15s;white-space:nowrap}
 .fix-btn:hover{background:#4a1010;border-color:var(--red)}
 .fix-btn:disabled{opacity:.4;cursor:not-allowed}
-.toggle-row{display:flex;align-items:center;gap:8px;padding:6px 0}
-.toggle-label{font-size:12px;color:var(--text2);flex:1;line-height:1.3}
-.toggle{position:relative;width:30px;height:17px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--border2);border-radius:17px;cursor:pointer;transition:all .2s}
-.toggle input:checked + .toggle-track{background:var(--accent-dim);border-color:var(--accent)}
-.toggle-thumb{position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--text3);transition:all .2s;pointer-events:none}
-.toggle input:checked ~ .toggle-thumb{left:15px;background:var(--accent)}
-.suggest-spinner{display:inline-block;width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
 
-/* Editor area */
+/* ── Editor ── */
 .editor-area{flex:1;display:flex;overflow:hidden}
 .editor-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .editor-pane:last-child{border-right:none}
@@ -164,7 +186,7 @@ input[type=file]{display:none}
 .pane-scroll::-webkit-scrollbar-track{background:var(--bg0)}
 .pane-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-/* Subtitle cards */
+/* ── Subtitle cards ── */
 .sub-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:9px 11px;margin-bottom:7px;transition:border-color .15s;position:relative}
 .sub-card.warn{border-color:#5a3800}
 .sub-card.error{border-color:#5a1a1a}
@@ -195,8 +217,7 @@ input[type=file]{display:none}
 .sub-card.editable:hover .edit-icon{opacity:1}
 .edit-textarea{width:100%;background:var(--bg0);border:1px solid var(--accent);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:13px;padding:6px 8px;resize:vertical;outline:none;line-height:1.5;margin-top:2px}
 
-
-/* Drop zone */
+/* ── Drop zone ── */
 .drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;text-align:center;cursor:pointer;border:2px dashed var(--border2);border-radius:10px;margin:16px;transition:all .2s}
 .drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-dim)}
 .drop-icon{font-size:38px;opacity:.4;line-height:1}
@@ -207,835 +228,943 @@ input[type=file]{display:none}
 <body>
 <div class="app">
 
-  <div class="topbar">
-    <div class="logo">sub<span>.</span>translate</div>
-    <div class="api-row">
-      <span class="api-label" id="apiLabel">API key</span>
-      <input class="api-input" type="password" id="apiKey" placeholder="…" autocomplete="off">
-      <div class="api-dot" id="apiDot"></div>
+<!-- ══════════════════════════════════════════════
+     SETTINGS MODAL
+══════════════════════════════════════════════ -->
+<div id="settingsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" onclick="closeSettings()">×</button>
     </div>
-  </div>
+    <div class="modal-body">
 
-  <div class="main">
-    <div class="sidebar">
-
-      <div class="s-sec">
-        <div class="tab-switcher">
-          <button class="tab-sw-btn active" id="sw-import" onclick="switchImportTab('import')">Import</button>
-          <button class="tab-sw-btn" id="sw-transcribe" onclick="switchImportTab('transcribe')">Transcribe</button>
-        </div>
-
-        <!-- Import panel -->
-        <div id="panel-import">
-          <input type="file" id="fileInput" accept=".srt,.txt,.csv">
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="flex:1">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
-              Open file
-            </button>
-            <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear everything" style="flex:0 0 auto;padding:7px 10px;color:var(--text3)" disabled>
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
-            </button>
-          </div>
-          <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
-          <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
-          <div style="margin-top:9px">
-            <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:5px">Hint format</div>
-            <select class="select" id="importFormat">
-              <option value="auto">Auto-detect</option>
-              <option value="srt">SRT</option>
-              <option value="txt">TXT (one per line)</option>
-              <option value="csv">CSV</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Transcribe panel -->
-        <div id="panel-transcribe" style="display:none">
-
-          <!-- Whisper provider -->
-          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:7px">Whisper provider</div>
-          <div class="provider-grid" style="margin-bottom:8px">
-            <div class="pvdr-btn active" id="xc-pvdr-groq" onclick="setXcProvider('groq')">
-              <span class="pvdr-name">Groq</span>
-              <span class="pvdr-rpm">Free · 2K/day</span>
-            </div>
-            <div class="pvdr-btn" id="xc-pvdr-openai" onclick="setXcProvider('openai')">
-              <span class="pvdr-name">OpenAI</span>
-              <span class="pvdr-rpm">$0.006/min</span>
-            </div>
-          </div>
-          <div class="xc-key-row">
-            <span class="xc-key-label" id="xcKeyLabel">Groq key</span>
-            <input class="xc-key-input" type="password" id="xcApiKey" placeholder="gsk_..." autocomplete="off">
-            <div class="xc-dot" id="xcDot"></div>
-          </div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:10px" id="xcKeyHint">Same key as translation if using Groq</div>
-
-          <div class="xc-sep"></div>
-
-          <!-- Source language -->
-          <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:6px">Audio language</div>
-          <select class="select" id="xcSourceLang" style="margin-bottom:10px;font-size:12px">
-            <option value="auto">Auto-detect</option>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-            <option value="pt">Portuguese</option>
-            <option value="nl">Dutch</option>
-            <option value="pl">Polish</option>
-            <option value="ru">Russian</option>
-            <option value="tr">Turkish</option>
-            <option value="ar">Arabic</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="zh">Chinese</option>
-            <option value="ca">Catalan</option>
-          </select>
-
-          <!-- File drop -->
-          <input type="file" id="xcFileInput" accept="audio/*,video/*,.mp3,.mp4,.wav,.m4a,.mov,.mkv,.aac,.ogg,.flac,.webm">
-          <div class="xc-drop" id="xcDrop">
-            <div class="xc-drop-icon">🎙</div>
-            <div class="xc-drop-title">Drop audio or video file</div>
-            <div class="xc-drop-sub">MP3 · MP4 · WAV · M4A · MOV · MKV · max 25MB</div>
-          </div>
-          <div id="xcFileInfo" style="display:none"></div>
-
-          <div class="xc-progress" style="margin-top:8px">
-            <div class="progress-bar"><div class="progress-fill" id="xcProgressFill"></div></div>
-          </div>
-          <div class="xc-status" id="xcStatus"></div>
-
-          <button class="btn btn-primary" id="xcBtn" onclick="startTranscription()" style="margin-top:8px" disabled>
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1a3 3 0 013 3v4a3 3 0 01-6 0V4a3 3 0 013-3z"/><path d="M3 9a5 5 0 0010 0M8 14v2M5 16h6"/></svg>
-            Transcribe
-          </button>
-        </div>
+      <div class="sg-title">Output Format</div>
+      <div class="sg-row">
+        <span class="sg-label">Max chars/line — Horizontal</span>
+        <input class="sg-input" type="number" id="s-maxH" min="10" max="120" value="42">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Max chars/line — Vertical</span>
+        <input class="sg-input" type="number" id="s-maxV" min="10" max="80" value="32">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Max lines/subtitle</span>
+        <input class="sg-input" type="number" id="s-maxLines" min="1" max="6" value="2">
       </div>
 
-      <div class="s-sec">
-        <div class="s-title">Source language</div>
-        <select class="select" id="srcLangSelect">
-          <option value="Auto-detect">Auto-detect</option>
-          <option value="English">English</option>
-          <option value="Spanish">Spanish</option>
-          <option value="French">French</option>
-          <option value="German">German</option>
-          <option value="Italian">Italian</option>
-          <option value="Portuguese">Portuguese</option>
-          <option value="Dutch">Dutch</option>
-          <option value="Polish">Polish</option>
-          <option value="Russian">Russian</option>
-          <option value="Turkish">Turkish</option>
-          <option value="Arabic">Arabic</option>
-          <option value="Japanese">Japanese</option>
-          <option value="Korean">Korean</option>
-          <option value="Chinese (Simplified)">Chinese (Simplified)</option>
-          <option value="Catalan">Catalan</option>
+      <div class="sg-sep"></div>
+      <div class="sg-title">Transcription — ElevenLabs</div>
+      <div class="sg-note">The API key is embedded. Override below only if you need a different key.</div>
+      <div class="sg-row">
+        <span class="sg-label">API Key override</span>
+        <input class="sg-input wide" type="password" id="s-elKey" placeholder="Leave blank → embedded key" autocomplete="off">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Model</span>
+        <select class="sg-select" id="s-elModel">
+          <option value="scribe_v1">Scribe v1</option>
+          <option value="scribe_v1_experimental">Scribe v1 Experimental</option>
         </select>
       </div>
 
-      <div class="s-sec">
-        <div class="s-title">Target language</div>
-        <select class="select" id="langSelect" onchange="onLangSelectChange()">
-          <option value="English">English</option>
-          <option value="Spanish">Spanish</option>
-          <option value="French">French</option>
-          <option value="German">German</option>
-          <option value="Italian">Italian</option>
-          <option value="Portuguese">Portuguese</option>
-          <option value="Dutch">Dutch</option>
-          <option value="Polish">Polish</option>
-          <option value="Russian">Russian</option>
-          <option value="Turkish">Turkish</option>
-          <option value="Arabic">Arabic</option>
-          <option value="Japanese">Japanese</option>
-          <option value="Korean">Korean</option>
-          <option value="Chinese (Simplified)">Chinese (Simplified)</option>
-          <option value="Catalan">Catalan</option>
-          <option value="__custom__">Custom…</option>
-        </select>
-        <input class="select" type="text" id="langCustom" placeholder="Type any language…"
-          style="display:none;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;width:100%;outline:none"
-          oninput="syncChips()">
-        <div class="lang-chips">
-          <span class="lchip" onclick="setLang('English')">EN</span>
-          <span class="lchip" onclick="setLang('Spanish')">ES</span>
-          <span class="lchip" onclick="setLang('French')">FR</span>
-          <span class="lchip" onclick="setLang('German')">DE</span>
-          <span class="lchip" onclick="setLang('Italian')">IT</span>
-          <span class="lchip" onclick="setLang('Catalan')">CA</span>
-          <span class="lchip" onclick="setLang('Japanese')">JA</span>
-          <span class="lchip" onclick="setLang('Korean')">KO</span>
-        </div>
-      </div>
-
-      <div class="s-sec">
-        <div class="s-title">Output format</div>
-        <div class="radio-group">
-          <div class="radio-opt active" id="opt-h" onclick="setOutput('horizontal')">
-            <div class="radio-dot"></div><span class="radio-label">Horizontal</span>
-          </div>
-          <div class="radio-opt" id="opt-v" onclick="setOutput('vertical')">
-            <div class="radio-dot"></div><span class="radio-label">Vertical (split long)</span>
-          </div>
-        </div>
-        <div class="limit-box" id="limitBox">
-          <b>Max chars/line:</b> 42<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> off
-        </div>
-      </div>
-
-      <div class="s-sec">
-        <div class="s-title">AI Settings</div>
-        <div class="toggle-row">
-          <span class="toggle-label">Allow rephrase to fit length</span>
-          <label class="toggle">
-            <input type="checkbox" id="allowRephrase">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:2px" id="rephraseHint">
-          Off: only reflows line breaks.<br>On: AI may shorten/rephrase to fit.
-        </div>
-      </div>
-      <div class="s-sec">
-        <div class="s-title">Provider</div>
-        <div class="provider-grid">
-          <div class="pvdr-btn active" id="pvdr-gemini" onclick="setProvider('gemini')">
-            <span class="pvdr-name">Gemini</span>
-            <span class="pvdr-rpm">15 RPM · 1K/day</span>
-          </div>
-          <div class="pvdr-btn" id="pvdr-groq" onclick="setProvider('groq')">
-            <span class="pvdr-name">Groq</span>
-            <span class="pvdr-rpm">30 RPM · 14K/day</span>
-          </div>
-          <div class="pvdr-btn" id="pvdr-openrouter" onclick="setProvider('openrouter')">
-            <span class="pvdr-name">OpenRouter</span>
-            <span class="pvdr-rpm">free models</span>
-          </div>
-          <div class="pvdr-btn" id="pvdr-mistral" onclick="setProvider('mistral')">
-            <span class="pvdr-name">Mistral</span>
-            <span class="pvdr-rpm">1 RPM · free</span>
-          </div>
-        </div>
-        <div class="model-select-wrap">
-          <select class="select" id="modelSelect" style="font-size:11px"></select>
-        </div>
-        <div style="margin-top:6px;font-size:10px;color:var(--text3);line-height:1.6" id="providerHint"></div>
-      </div>
-      <div class="s-sec">
-        <div class="s-title">Translate</div>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-        <button class="btn btn-primary" id="translateBtn" onclick="startTranslation()" disabled>
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
-          Translate
-        </button>
-        <div class="status-msg" id="statusMsg"></div>
-      </div>
-
-      <div class="s-sec">
-        <div class="s-title">Export active tab</div>
-        <select class="select" id="exportFormat" style="margin-bottom:8px">
-          <option value="srt">SRT</option>
-          <option value="txt">TXT</option>
-          <option value="csv">CSV</option>
-        </select>
-        <button class="btn btn-green" id="exportBtn" onclick="exportFile()" disabled>
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
-          Export
-        </button>
-      </div>
+      <div class="sg-sep"></div>
+      <div class="sg-title">Translation</div>
+      <div class="sg-note">Translation uses the API key entered in the topbar and the Provider/Model selected in the sidebar.</div>
 
     </div>
-
-    <div class="center">
-      <div class="lang-tabs-bar" id="langTabsBar"></div>
-      <div class="view-toolbar">
-        <button class="vbtn active" id="vbtn-list" onclick="setView('list')">List</button>
-        <button class="vbtn" id="vbtn-compare" onclick="setView('compare')">Compare</button>
-        <div class="vt-sep"></div>
-        <span class="pill pill-blue" id="countPill">0 subs</span>
-        <span class="pill pill-amber" id="warnPill" style="display:none">0 warnings</span>
-        <span class="pill pill-red" id="errPill" style="display:none">0 errors</span>
-        <button class="fix-btn" id="fixBtn" style="display:none" onclick="fixOverlength()">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/><path d="M12 4l-8 8"/><path d="M1 13l2-2"/><path d="M13.5 0.5l2 2-1 1-2-2 1-1z"/></svg>
-          Fix
-        </button>
-        <button class="bt-btn" id="btBtn" style="display:none" onclick="startBackTranslation()">↩ Back-translate</button>
-        <span class="edit-hint" id="editHint"></span>
-      </div>
-      <div class="editor-area" id="editorArea"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" style="width:auto;padding:7px 16px" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveSettings()">Save</button>
     </div>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="logo">sub<span>.</span>translate</div>
+  <div class="api-row">
+    <span class="api-label" id="apiLabel">Gemini API key</span>
+    <input class="api-input" type="password" id="apiKey" placeholder="AIza…" autocomplete="off">
+    <div class="api-dot" id="apiDot"></div>
+  </div>
+  <button class="icon-btn" onclick="openSettings()" title="Settings">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="8" r="2.5"/>
+      <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+    </svg>
+  </button>
+</div>
+
+<div class="main">
+<div class="sidebar">
+
+  <!-- ── Import / Transcribe ── -->
+  <div class="s-sec">
+    <div class="tab-switcher">
+      <button class="tab-sw-btn active" id="sw-import"     onclick="switchImportTab('import')">Import</button>
+      <button class="tab-sw-btn"        id="sw-transcribe" onclick="switchImportTab('transcribe')">Transcribe</button>
+    </div>
+
+    <!-- Import panel -->
+    <div id="panel-import">
+      <input type="file" id="fileInput" accept=".srt,.txt,.csv,.xlsx">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn btn-ghost" onclick="document.getElementById('fileInput').click()" style="flex:1">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+          Open file
+        </button>
+        <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear everything" style="flex:0 0 auto;padding:7px 10px;color:var(--text3)" disabled>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
+        </button>
+      </div>
+      <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
+      <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px">Parse pasted content</button>
+      <div style="margin-top:9px">
+        <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:5px">Hint format</div>
+        <select class="select" id="importFormat">
+          <option value="auto">Auto-detect</option>
+          <option value="srt">SRT</option>
+          <option value="txt">TXT (one per line)</option>
+          <option value="csv">CSV</option>
+          <option value="multilang">XLSX / CSV multi-language</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Transcribe panel -->
+    <div id="panel-transcribe" style="display:none">
+      <div style="font-size:10px;letter-spacing:.08em;color:var(--text3);font-weight:500;text-transform:uppercase;margin-bottom:6px">Audio language</div>
+      <select class="select" id="xcSourceLang" style="margin-bottom:10px;font-size:12px">
+        <option value="auto">Auto-detect</option>
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+        <option value="pt">Portuguese</option>
+        <option value="nl">Dutch</option>
+        <option value="pl">Polish</option>
+        <option value="ru">Russian</option>
+        <option value="tr">Turkish</option>
+        <option value="ar">Arabic</option>
+        <option value="ja">Japanese</option>
+        <option value="ko">Korean</option>
+        <option value="zh">Chinese</option>
+        <option value="ca">Catalan</option>
+      </select>
+
+      <input type="file" id="xcFileInput" accept="audio/*,video/*,.mp3,.mp4,.wav,.m4a,.mov,.mkv,.aac,.ogg,.flac,.webm">
+      <div class="xc-drop" id="xcDrop">
+        <div class="xc-drop-icon">🎙</div>
+        <div class="xc-drop-title">Drop audio or video file</div>
+        <div class="xc-drop-sub">MP3 · MP4 · WAV · M4A · MOV · MKV</div>
+      </div>
+      <div id="xcFileInfo" style="display:none"></div>
+
+      <div class="xc-progress" style="margin-top:8px">
+        <div class="progress-bar"><div class="progress-fill" id="xcProgressFill"></div></div>
+      </div>
+      <div class="xc-status" id="xcStatus"></div>
+
+      <button class="btn btn-primary" id="xcBtn" onclick="startTranscription()" style="margin-top:8px" disabled>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1a3 3 0 013 3v4a3 3 0 01-6 0V4a3 3 0 013-3z"/><path d="M3 9a5 5 0 0010 0M8 14v2M5 16h6"/></svg>
+        Transcribe
+      </button>
+      <div style="margin-top:7px">
+        <span class="el-badge"><span class="el-badge-dot"></span>ElevenLabs Scribe · key embedded</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Source language ── -->
+  <div class="s-sec">
+    <div class="s-title">Source language</div>
+    <select class="select" id="srcLangSelect">
+      <option value="Auto-detect">Auto-detect</option>
+      <option value="English">English</option>
+      <option value="Spanish">Spanish</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+      <option value="Dutch">Dutch</option>
+      <option value="Polish">Polish</option>
+      <option value="Russian">Russian</option>
+      <option value="Turkish">Turkish</option>
+      <option value="Arabic">Arabic</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Korean">Korean</option>
+      <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+      <option value="Catalan">Catalan</option>
+    </select>
+  </div>
+
+  <!-- ── Target language ── -->
+  <div class="s-sec">
+    <div class="s-title">Target language</div>
+    <select class="select" id="langSelect" onchange="onLangSelectChange()">
+      <option value="English">English</option>
+      <option value="Spanish">Spanish</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+      <option value="Dutch">Dutch</option>
+      <option value="Polish">Polish</option>
+      <option value="Russian">Russian</option>
+      <option value="Turkish">Turkish</option>
+      <option value="Arabic">Arabic</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Korean">Korean</option>
+      <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+      <option value="Catalan">Catalan</option>
+      <option value="__custom__">Custom…</option>
+    </select>
+    <input class="select" type="text" id="langCustom" placeholder="Type any language…"
+      style="display:none;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;width:100%;outline:none"
+      oninput="syncChips()">
+    <div class="lang-chips">
+      <span class="lchip" onclick="setLang('English')">EN</span>
+      <span class="lchip" onclick="setLang('Spanish')">ES</span>
+      <span class="lchip" onclick="setLang('French')">FR</span>
+      <span class="lchip" onclick="setLang('German')">DE</span>
+      <span class="lchip" onclick="setLang('Italian')">IT</span>
+      <span class="lchip" onclick="setLang('Catalan')">CA</span>
+      <span class="lchip" onclick="setLang('Japanese')">JA</span>
+      <span class="lchip" onclick="setLang('Korean')">KO</span>
+    </div>
+  </div>
+
+  <!-- ── Output format ── -->
+  <div class="s-sec">
+    <div class="s-title">Output format</div>
+    <div class="radio-group">
+      <div class="radio-opt active" id="opt-h" onclick="setOutput('horizontal')">
+        <div class="radio-dot"></div><span class="radio-label">Horizontal</span>
+      </div>
+      <div class="radio-opt" id="opt-v" onclick="setOutput('vertical')">
+        <div class="radio-dot"></div><span class="radio-label">Vertical (split long)</span>
+      </div>
+    </div>
+    <div class="limit-box" id="limitBox">
+      <b>Max chars/line:</b> 42<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> off
+    </div>
+  </div>
+
+  <!-- ── AI Settings ── -->
+  <div class="s-sec">
+    <div class="s-title">AI Settings</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Allow rephrase to fit length</span>
+      <label class="toggle">
+        <input type="checkbox" id="allowRephrase">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+    <div style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:2px">
+      Off: only reflows line breaks. On: AI may shorten/rephrase.
+    </div>
+  </div>
+
+  <!-- ── Provider ── -->
+  <div class="s-sec">
+    <div class="s-title">Provider</div>
+    <div class="provider-grid">
+      <div class="pvdr-btn active" id="pvdr-gemini"     onclick="setProvider('gemini')">
+        <span class="pvdr-name">Gemini</span><span class="pvdr-rpm">15 RPM · 1K/day</span>
+      </div>
+      <div class="pvdr-btn" id="pvdr-groq"          onclick="setProvider('groq')">
+        <span class="pvdr-name">Groq</span><span class="pvdr-rpm">30 RPM · 14K/day</span>
+      </div>
+      <div class="pvdr-btn" id="pvdr-openrouter"    onclick="setProvider('openrouter')">
+        <span class="pvdr-name">OpenRouter</span><span class="pvdr-rpm">free models</span>
+      </div>
+      <div class="pvdr-btn" id="pvdr-mistral"       onclick="setProvider('mistral')">
+        <span class="pvdr-name">Mistral</span><span class="pvdr-rpm">1 RPM · free</span>
+      </div>
+    </div>
+    <div class="model-select-wrap">
+      <select class="select" id="modelSelect" style="font-size:11px"></select>
+    </div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text3);line-height:1.6" id="providerHint"></div>
+  </div>
+
+  <!-- ── Translate ── -->
+  <div class="s-sec">
+    <div class="s-title">Translate</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <button class="btn btn-primary" id="translateBtn" onclick="startTranslation()" disabled>
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
+      Translate
+    </button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <!-- ── Export / Convert (active tab) ── -->
+  <div class="s-sec">
+    <div class="s-title">Export / Convert</div>
+    <select class="select" id="exportFormat" style="margin-bottom:8px">
+      <option value="srt">SRT</option>
+      <option value="txt">TXT</option>
+      <option value="csv">CSV</option>
+      <option value="xlsx">XLSX</option>
+    </select>
+    <button class="btn btn-green" id="exportBtn" onclick="exportFile()" disabled>
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
+      Export active tab
+    </button>
+  </div>
+
+  <!-- ── Export all languages ── -->
+  <div class="s-sec">
+    <div class="s-title">Export all languages</div>
+    <select class="select" id="exportAllFormat" style="margin-bottom:8px">
+      <option value="csv">CSV</option>
+      <option value="xlsx">XLSX</option>
+    </select>
+    <button class="btn btn-ghost" id="exportAllBtn" onclick="exportAllTranslations()" disabled>
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
+      Export all translations
+    </button>
+  </div>
+
+</div><!-- /sidebar -->
+
+<div class="center">
+  <div class="lang-tabs-bar" id="langTabsBar"></div>
+  <div class="view-toolbar">
+    <button class="vbtn active" id="vbtn-list"    onclick="setView('list')">List</button>
+    <button class="vbtn"        id="vbtn-compare" onclick="setView('compare')">Compare</button>
+    <div class="vt-sep"></div>
+    <span class="pill pill-blue"  id="countPill">0 subs</span>
+    <span class="pill pill-amber" id="warnPill"  style="display:none">0 warnings</span>
+    <span class="pill pill-red"   id="errPill"   style="display:none">0 errors</span>
+    <button class="fix-btn" id="fixBtn" style="display:none" onclick="fixOverlength()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/><path d="M12 4l-8 8"/></svg>
+      Fix
+    </button>
+    <button class="bt-btn" id="btBtn" style="display:none" onclick="startBackTranslation()">↩ Back-translate</button>
+    <span class="edit-hint" id="editHint"></span>
+  </div>
+  <div class="editor-area" id="editorArea"></div>
+</div>
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- SheetJS for XLSX read/write -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const MAX_H = 42, MAX_V = 32;
-let subtitles = [];
-let translations = {};
-let activeTab = 'source';
-let outputMode = 'horizontal';
-let viewMode = 'list';
+// ══════════════════════════════════════════════════════════════
+//  EMBEDDED API KEY & SETTINGS
+// ══════════════════════════════════════════════════════════════
+const ELEVENLABS_KEY_DEFAULT = 'b6d439c1cf0d397826e00f772337d906df26700cca7f47b42c618767331c124b';
+
+let settings = {
+  maxCharsH:     42,
+  maxCharsV:     32,
+  maxLinesPerSub: 2,
+  elKeyOverride: '',
+  elModel:       'scribe_v1',
+};
+
+// ── App state ──────────────────────────────────────────────
+let subtitles        = [];
+let translations     = {};
+let activeTab        = 'source';
+let outputMode       = 'horizontal';
+let viewMode         = 'list';
+let backTranslations = {};
+let currentEditCard  = null;
+let activeProvider   = 'gemini';
+let xcFile           = null;
 
 const $ = id => document.getElementById(id);
 
+// ══════════════════════════════════════════════════════════════
+//  SETTINGS MODAL
+// ══════════════════════════════════════════════════════════════
+function openSettings() {
+  $('s-maxH').value    = settings.maxCharsH;
+  $('s-maxV').value    = settings.maxCharsV;
+  $('s-maxLines').value = settings.maxLinesPerSub;
+  $('s-elKey').value   = settings.elKeyOverride;
+  $('s-elModel').value = settings.elModel;
+  $('settingsModal').style.display = 'flex';
+}
+function closeSettings() {
+  $('settingsModal').style.display = 'none';
+}
+function saveSettings() {
+  settings.maxCharsH      = Math.max(10, parseInt($('s-maxH').value)     || 42);
+  settings.maxCharsV      = Math.max(10, parseInt($('s-maxV').value)     || 32);
+  settings.maxLinesPerSub = Math.max(1,  parseInt($('s-maxLines').value) || 2);
+  settings.elKeyOverride  = $('s-elKey').value.trim();
+  settings.elModel        = $('s-elModel').value;
+  closeSettings();
+  updateLimitBox();
+  renderCurrentView();
+}
+function updateLimitBox() {
+  $('limitBox').innerHTML =
+    `<b>Max chars/line:</b> ${maxLen()}<br>` +
+    `<b>Max lines/sub:</b> ${settings.maxLinesPerSub}<br>` +
+    `<b>Auto-split:</b> ${outputMode === 'vertical' ? 'on' : 'off'}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TRANSLATION PROVIDERS
+// ══════════════════════════════════════════════════════════════
+const PROVIDERS = {
+  gemini: {
+    label:'Gemini API key', placeholder:'AIza…',
+    hint:'Get key: aistudio.google.com — No credit card needed',
+    validate: v => v.startsWith('AIza') && v.length > 20,
+    models:[
+      {id:'gemini-2.5-flash-lite', name:'Gemini 2.5 Flash-Lite  ·  15 RPM / 1K/day'},
+      {id:'gemini-2.5-flash',      name:'Gemini 2.5 Flash       ·  10 RPM / 250/day'},
+    ]
+  },
+  groq: {
+    label:'Groq API key', placeholder:'gsk_…',
+    hint:'Get key: console.groq.com — No credit card needed',
+    validate: v => v.startsWith('gsk_') && v.length > 20,
+    models:[
+      {id:'llama-3.1-8b-instant',             name:'Llama 3.1 8B Instant  ·  30 RPM / 14.4K/day'},
+      {id:'llama-3.3-70b-versatile',           name:'Llama 3.3 70B         ·  30 RPM / 1K/day'},
+      {id:'llama-4-scout-17b-16e-instruct',    name:'Llama 4 Scout 17B     ·  30 RPM'},
+      {id:'qwen-qwq-32b',                      name:'Qwen QwQ 32B          ·  30 RPM'},
+      {id:'deepseek-r1-distill-llama-70b',     name:'DeepSeek R1 70B       ·  30 RPM'},
+      {id:'gemma2-9b-it',                      name:'Gemma 2 9B            ·  30 RPM'},
+    ]
+  },
+  openrouter: {
+    label:'OpenRouter API key', placeholder:'sk-or-…',
+    hint:'Get key: openrouter.ai — Free models available',
+    validate: v => v.startsWith('sk-or-') && v.length > 20,
+    models:[
+      {id:'meta-llama/llama-3.3-70b-instruct:free', name:'Llama 3.3 70B (free)'},
+      {id:'meta-llama/llama-4-maverick:free',        name:'Llama 4 Maverick (free)'},
+      {id:'google/gemma-3-27b-it:free',              name:'Gemma 3 27B (free)'},
+      {id:'mistralai/mistral-7b-instruct:free',      name:'Mistral 7B (free)'},
+      {id:'deepseek/deepseek-r1:free',               name:'DeepSeek R1 (free)'},
+      {id:'qwen/qwq-32b:free',                       name:'QwQ 32B (free)'},
+    ]
+  },
+  mistral: {
+    label:'Mistral API key', placeholder:'…',
+    hint:'Get key: console.mistral.ai — Free tier: 1 RPM',
+    validate: v => v.length > 20,
+    models:[
+      {id:'mistral-small-latest', name:'Mistral Small  ·  1 RPM free'},
+      {id:'open-mistral-7b',      name:'Mistral 7B     ·  1 RPM free'},
+    ]
+  },
+};
+
+function setProvider(id) {
+  activeProvider = id;
+  Object.keys(PROVIDERS).forEach(k => {
+    const b = $('pvdr-'+k); if (b) b.className = 'pvdr-btn'+(k===id?' active':'');
+  });
+  const cfg = PROVIDERS[id];
+  $('apiLabel').textContent     = cfg.label;
+  $('apiKey').placeholder       = cfg.placeholder;
+  $('apiKey').value             = '';
+  $('apiDot').className         = 'api-dot';
+  $('providerHint').textContent = cfg.hint;
+  const sel = $('modelSelect'); sel.innerHTML = '';
+  cfg.models.forEach(m => { const o=document.createElement('option'); o.value=m.id; o.textContent=m.name; sel.appendChild(o); });
+  updateProviderTiming();
+}
+function updateProviderTiming() {
+  window._providerBatch = activeProvider==='mistral'?10:30;
+  window._providerPause = activeProvider==='mistral'?65000:activeProvider==='gemini'?10000:5000;
+}
+$('apiKey').addEventListener('input', () => {
+  const v=($('apiKey').value||'').trim();
+  $('apiDot').className='api-dot'+(PROVIDERS[activeProvider]?.validate(v)?' ok':'');
+});
+setProvider('gemini');
+
+// ══════════════════════════════════════════════════════════════
+//  OUTPUT MODE
+// ══════════════════════════════════════════════════════════════
+function maxLen() { return outputMode==='horizontal'?settings.maxCharsH:settings.maxCharsV; }
+
+function setOutput(mode) {
+  outputMode = mode;
+  $('opt-h').className = 'radio-opt'+(mode==='horizontal'?' active':'');
+  $('opt-v').className = 'radio-opt'+(mode==='vertical'  ?' active':'');
+  updateLimitBox();
+  renderCurrentView();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LANGUAGE HELPERS
+// ══════════════════════════════════════════════════════════════
 const LANG_CODES = {
   English:'EN',Spanish:'ES',French:'FR',German:'DE',Italian:'IT',Portuguese:'PT',
   Dutch:'NL',Polish:'PL',Russian:'RU',Turkish:'TR',Arabic:'AR',
   Japanese:'JA',Korean:'KO','Chinese (Simplified)':'ZH',Catalan:'CA'
 };
-
-// API key
-// ── Providers config ──
-const PROVIDERS = {
-  gemini: {
-    label: 'Gemini API key',
-    placeholder: 'AIza...',
-    hint: 'Get key: aistudio.google.com — No credit card needed',
-    validate: v => v.startsWith('AIza') && v.length > 20,
-    models: [
-      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite  ·  15 RPM / 1K/day' },
-      { id: 'gemini-2.5-flash',      name: 'Gemini 2.5 Flash       ·  10 RPM / 250/day' },
-    ]
-  },
-  groq: {
-    label: 'Groq API key',
-    placeholder: 'gsk_...',
-    hint: 'Get key: console.groq.com — No credit card needed',
-    validate: v => v.startsWith('gsk_') && v.length > 20,
-    models: [
-      { id: 'llama-3.1-8b-instant',    name: 'Llama 3.1 8B Instant  ·  30 RPM / 14.4K/day' },
-      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B         ·  30 RPM / 1K/day' },
-      { id: 'llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B     ·  30 RPM' },
-      { id: 'qwen-qwq-32b',            name: 'Qwen QwQ 32B          ·  30 RPM' },
-      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 70B       ·  30 RPM' },
-      { id: 'gemma2-9b-it',            name: 'Gemma 2 9B            ·  30 RPM' },
-    ]
-  },
-  openrouter: {
-    label: 'OpenRouter API key',
-    placeholder: 'sk-or-...',
-    hint: 'Get key: openrouter.ai — Free models available',
-    validate: v => v.startsWith('sk-or-') && v.length > 20,
-    models: [
-      { id: 'meta-llama/llama-3.3-70b-instruct:free',  name: 'Llama 3.3 70B (free)' },
-      { id: 'meta-llama/llama-4-maverick:free',         name: 'Llama 4 Maverick (free)' },
-      { id: 'google/gemma-3-27b-it:free',               name: 'Gemma 3 27B (free)' },
-      { id: 'mistralai/mistral-7b-instruct:free',       name: 'Mistral 7B (free)' },
-      { id: 'deepseek/deepseek-r1:free',                name: 'DeepSeek R1 (free)' },
-      { id: 'qwen/qwq-32b:free',                        name: 'QwQ 32B (free)' },
-      { id: 'microsoft/phi-4:free',                     name: 'Phi-4 (free)' },
-    ]
-  },
-  mistral: {
-    label: 'Mistral API key',
-    placeholder: '...',
-    hint: 'Get key: console.mistral.ai — Free tier: 1 RPM',
-    validate: v => v.length > 20,
-    models: [
-      { id: 'mistral-small-latest', name: 'Mistral Small  ·  1 RPM free' },
-      { id: 'open-mistral-7b',      name: 'Mistral 7B     ·  1 RPM free' },
-    ]
-  },
-};
-
-let activeProvider = 'gemini';
-
-function setProvider(id) {
-  activeProvider = id;
-  Object.keys(PROVIDERS).forEach(k => {
-    const btn = $('pvdr-'+k);
-    if (btn) btn.className = 'pvdr-btn' + (k === id ? ' active' : '');
-  });
-  const cfg = PROVIDERS[id];
-  $('apiLabel').textContent = cfg.label;
-  $('apiKey').placeholder = cfg.placeholder;
-  $('apiKey').value = '';
-  $('apiDot').className = 'api-dot';
-  $('providerHint').textContent = cfg.hint;
-  // Populate model select
-  const sel = $('modelSelect');
-  sel.innerHTML = '';
-  cfg.models.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id; opt.textContent = m.name;
-    sel.appendChild(opt);
-  });
-  // Adjust batch/pause per provider
-  updateProviderTiming();
-}
-
-function updateProviderTiming() {
-  // stored globally, used in startTranslation
-  window._providerBatch = activeProvider === 'mistral' ? 10 : 30;
-  window._providerPause = activeProvider === 'mistral' ? 65000 : (activeProvider === 'gemini' ? 10000 : 5000);
-}
-
-$('apiKey').addEventListener('input', () => {
-  const v = $('apiKey').value.trim();
-  const valid = PROVIDERS[activeProvider]?.validate(v) ?? (v.length > 20);
-  $('apiDot').className = 'api-dot' + (valid ? ' ok' : '');
-});
-
-// Init provider UI
-setProvider('gemini');
-
-// Output mode
-function setOutput(mode) {
-  outputMode = mode;
-  $('opt-h').className = 'radio-opt' + (mode === 'horizontal' ? ' active' : '');
-  $('opt-v').className = 'radio-opt' + (mode === 'vertical' ? ' active' : '');
-  const max = mode === 'horizontal' ? MAX_H : MAX_V;
-  $('limitBox').innerHTML = `<b>Max chars/line:</b> ${max}<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> ${mode === 'vertical' ? 'on' : 'off'}`;
-  renderCurrentView();
-}
-
-// Language
 function getTargetLang() {
-  const sel = $('langSelect').value;
-  if (sel === '__custom__') return $('langCustom').value.trim() || '';
-  return sel;
+  const v=$('langSelect').value; return v==='__custom__'?($('langCustom').value.trim()||''):v;
 }
-
-function setLang(l) {
-  $('langSelect').value = l;
-  $('langCustom').style.display = 'none';
-  syncChips();
-}
-
+function setLang(l) { $('langSelect').value=l; $('langCustom').style.display='none'; syncChips(); }
 function onLangSelectChange() {
-  const sel = $('langSelect').value;
-  const customInput = $('langCustom');
-  if (sel === '__custom__') {
-    customInput.style.display = '';
-    customInput.focus();
-  } else {
-    customInput.style.display = 'none';
-  }
+  const v=$('langSelect').value;
+  $('langCustom').style.display=v==='__custom__'?'':'none';
+  if(v==='__custom__') $('langCustom').focus();
   syncChips();
 }
-
 function syncChips() {
-  const sel = getTargetLang();
+  const s=getTargetLang();
   document.querySelectorAll('.lchip').forEach(c => {
-    const match = Object.entries(LANG_CODES).some(([n, code]) => c.textContent === code && n === sel);
-    c.className = 'lchip' + (match ? ' active' : '');
+    const m=Object.entries(LANG_CODES).some(([n,code])=>c.textContent===code&&n===s);
+    c.className='lchip'+(m?' active':'');
   });
 }
 syncChips();
 
-// View mode
+// ══════════════════════════════════════════════════════════════
+//  VIEW MODE
+// ══════════════════════════════════════════════════════════════
 function setView(mode) {
-  viewMode = mode;
-  $('vbtn-list').className = 'vbtn' + (mode === 'list' ? ' active' : '');
-  $('vbtn-compare').className = 'vbtn' + (mode === 'compare' ? ' active' : '');
+  viewMode=mode;
+  $('vbtn-list').className   ='vbtn'+(mode==='list'   ?' active':'');
+  $('vbtn-compare').className='vbtn'+(mode==='compare'?' active':'');
   renderCurrentView();
 }
 
-// Tab management
+// ══════════════════════════════════════════════════════════════
+//  TAB MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+function el(tag,cls){const e=document.createElement(tag);if(cls)e.className=cls;return e;}
+
 function rebuildTabs() {
-  const bar = $('langTabsBar');
-  bar.innerHTML = '';
-
-  const srcTab = el('div', 'ltab src' + (activeTab === 'source' ? ' active' : ''));
-  srcTab.textContent = 'Source';
-  srcTab.onclick = () => switchToTab('source');
-  bar.appendChild(srcTab);
-
-  const langs = Object.keys(translations);
-  if (langs.length) {
-    bar.appendChild(el('div', 'ltab-sep'));
-    langs.forEach(lang => {
-      const code = LANG_CODES[lang] || lang.slice(0,2).toUpperCase();
-      const tab = el('div', 'ltab' + (activeTab === lang ? ' active' : ''));
-      const dot = el('span', 'ltab-dot'); tab.appendChild(dot);
-      const lbl = document.createTextNode(code); tab.appendChild(lbl);
-      const x = el('span', 'ltab-x'); x.textContent = '×';
-      x.title = `Remove ${lang}`;
-      x.onclick = e => { e.stopPropagation(); closeTab(lang); };
+  const bar=$('langTabsBar'); bar.innerHTML='';
+  const src=el('div','ltab src'+(activeTab==='source'?' active':''));
+  src.textContent='Source'; src.onclick=()=>switchToTab('source');
+  bar.appendChild(src);
+  const langs=Object.keys(translations);
+  if(langs.length) {
+    bar.appendChild(el('div','ltab-sep'));
+    langs.forEach(lang=>{
+      const code=LANG_CODES[lang]||lang.slice(0,2).toUpperCase();
+      const tab=el('div','ltab'+(activeTab===lang?' active':''));
+      const dot=el('span','ltab-dot'); tab.appendChild(dot);
+      tab.appendChild(document.createTextNode(code));
+      const x=el('span','ltab-x'); x.textContent='×'; x.title='Remove '+lang;
+      x.onclick=e=>{e.stopPropagation();closeTab(lang);};
       tab.appendChild(x);
-      tab.onclick = e => { if (!e.target.classList.contains('ltab-x')) switchToTab(lang); };
+      tab.onclick=e=>{if(!e.target.classList.contains('ltab-x'))switchToTab(lang);};
       bar.appendChild(tab);
     });
   }
-
-  const info = el('span', 'tabs-info');
-  info.textContent = langs.length ? `${langs.length} language${langs.length > 1 ? 's' : ''}` : 'no translations yet';
+  const info=el('span','tabs-info');
+  info.textContent=langs.length?langs.length+' language'+(langs.length>1?'s':''):'no translations yet';
   bar.appendChild(info);
 }
 
-function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-
 function switchToTab(lang) {
-  activeTab = lang;
-  $('exportBtn').disabled = lang === 'source' || !translations[lang];
-  rebuildTabs();
-  renderCurrentView();
+  activeTab=lang;
+  // Source tab is always exportable when subtitles exist
+  $('exportBtn').disabled = (lang==='source'?!subtitles.length:!translations[lang]);
+  rebuildTabs(); renderCurrentView();
 }
-
 function closeTab(lang) {
-  delete translations[lang];
-  delete backTranslations[lang];
-  if (activeTab === lang) activeTab = 'source';
-  $('exportBtn').disabled = activeTab === 'source' || !translations[activeTab];
-  rebuildTabs();
-  renderCurrentView();
+  delete translations[lang]; delete backTranslations[lang];
+  if(activeTab===lang) activeTab='source';
+  rebuildTabs(); updateExportAllBtn(); renderCurrentView();
 }
 
-// Import
-$('fileInput').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = ev => parseContent(ev.target.result, f.name);
-  r.readAsText(f); e.target.value = '';
+// ══════════════════════════════════════════════════════════════
+//  IMPORT / PARSE
+// ══════════════════════════════════════════════════════════════
+$('fileInput').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  if(ext==='xlsx') {
+    const r=new FileReader(); r.onload=ev=>parseXLSXBuffer(ev.target.result,f.name); r.readAsArrayBuffer(f);
+  } else {
+    const r=new FileReader(); r.onload=ev=>parseContent(ev.target.result,f.name); r.readAsText(f);
+  }
+  e.target.value='';
 });
 
 function parsePaste() {
-  const txt = $('pasteArea').value.trim(); if (!txt) return;
-  parseContent(txt, 'pasted.srt');
+  const t=($('pasteArea').value||'').trim(); if(!t) return; parseContent(t,'pasted.srt');
 }
 
 function parseContent(text, filename) {
-  const ext = (filename.split('.').pop() || '').toLowerCase();
-  const hint = $('importFormat').value;
-  const mode = hint !== 'auto' ? hint : ext;
-  if (mode === 'csv') subtitles = parseCSV(text);
-  else if (mode === 'txt') subtitles = parseTXT(text);
-  else subtitles = parseSRT(text);
-  translations = {}; backTranslations = {}; activeTab = 'source';
+  const ext=(filename.split('.').pop()||'').toLowerCase();
+  const hint=$('importFormat').value;
+  if(hint==='multilang'||(hint==='auto'&&isMultiLangCSV(text))) { loadMultiLangCSV(text); return; }
+  const mode=hint!=='auto'?hint:ext;
+  subtitles = mode==='csv'?parseCSV(text):mode==='txt'?parseTXT(text):parseSRT(text);
+  translations={}; backTranslations={}; activeTab='source';
+  afterLoad();
+}
+
+function parseXLSXBuffer(buf, filename) {
+  try {
+    const wb   = XLSX.read(new Uint8Array(buf),{type:'array'});
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const hint = $('importFormat').value;
+    // Multi-lang if hint says so OR has ≥4 columns with time-ish first two headers
+    if(hint==='multilang'||(rows[0]&&rows[0].length>=4&&isMultiLangHeaders(rows[0]))) {
+      loadMultiLangRows(rows);
+    } else {
+      // Treat as simple subtitle XLSX → convert rows to CSV-like and parse
+      const header=rows[0]||[]; const isHeaderRow=header.some(h=>String(h).toLowerCase().includes('text')||String(h).toLowerCase().includes('start'));
+      const dataRows=isHeaderRow?rows.slice(1):rows;
+      subtitles=dataRows.map((r,i)=>{
+        if(r.length>=3) return {index:i+1,start:String(r[0]).trim(),end:String(r[1]).trim(),text:String(r[2]).trim()};
+        return {index:i+1,start:'00:00:00,000',end:'00:00:01,000',text:String(r[0]||'').trim()};
+      }).filter(s=>s.text);
+      translations={}; backTranslations={}; activeTab='source';
+      afterLoad();
+    }
+  } catch(e) { setStatus('XLSX parse error: '+e.message,'err'); }
+}
+
+function isMultiLangCSV(text) {
+  const first=(text.trim().split('\n')[0]||'');
+  const cols=first.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+  if(cols.length<4) return false;
+  const h0=cols[0].toLowerCase(), h1=cols[1].toLowerCase();
+  return (h0.includes('start')||h0.includes('time'))&&(h1.includes('end')||h1.includes('time'));
+}
+function isMultiLangHeaders(headers) {
+  if(!headers||headers.length<4) return false;
+  const h0=String(headers[0]).toLowerCase().trim(), h1=String(headers[1]).toLowerCase().trim();
+  return (h0.includes('start')||h0.includes('time'))&&(h1.includes('end')||h1.includes('time'));
+}
+
+function loadMultiLangCSV(text) {
+  const rows=text.trim().split('\n').map(line=>
+    line.split(',').map(c=>c.trim().replace(/^"|"$/g,''))
+  );
+  loadMultiLangRows(rows);
+}
+
+function loadMultiLangRows(rows) {
+  if(!rows||rows.length<2){setStatus('Empty or invalid multi-language file','err');return;}
+  const headers  = rows[0].map(h=>String(h).trim());
+  const langCols = headers.slice(2).filter(Boolean);
+  const dataRows = rows.slice(1).filter(r=>r.length>=3);
+  if(!langCols.length){setStatus('No language columns found','err');return;}
+
+  // First language column → source
+  subtitles=dataRows.map((row,i)=>({
+    index:i+1,
+    start:String(row[0]||'00:00:00,000').trim(),
+    end:  String(row[1]||'00:00:01,000').trim(),
+    text: String(row[2]||'').trim()
+  })).filter(s=>s.text);
+
+  // Additional language columns → translations
+  translations={}; backTranslations={};
+  langCols.slice(1).forEach((lang,li)=>{
+    if(!lang) return;
+    translations[lang]=dataRows.map((row,i)=>({
+      index:i+1,
+      start:String(row[0]||'00:00:00,000').trim(),
+      end:  String(row[1]||'00:00:01,000').trim(),
+      text: String(row[li+3]||'').trim()
+    })).filter(s=>s.text);
+  });
+
+  activeTab='source';
+  afterLoad();
+  setStatus(`Loaded ${subtitles.length} rows · ${langCols.length} language${langCols.length>1?'s':''}`, 'ok');
+}
+
+function afterLoad() {
   $('translateBtn').disabled = !subtitles.length;
-  $('exportBtn').disabled = true;
-  $('clearBtn').disabled = !subtitles.length;
+  $('exportBtn').disabled    = !subtitles.length;
+  $('clearBtn').disabled     = !subtitles.length;
+  updateExportAllBtn();
   rebuildTabs(); renderCurrentView(); setStatus('');
 }
 
+// ── Format parsers ─────────────────────────────────────────
 function parseSRT(text) {
-  return text.trim().split(/\n\s*\n/).map(b => {
-    const lines = b.trim().split('\n'); if (lines.length < 2) return null;
-    const idx = parseInt(lines[0]) || 0;
-    const arrow = lines[1].indexOf('-->'); if (arrow < 0) return null;
-    const start = lines[1].slice(0, arrow).trim(), end = lines[1].slice(arrow+3).trim();
-    const txt = lines.slice(2).join('\n').replace(/<[^>]+>/g,'').trim();
-    return txt ? {index:idx, start, end, text:txt} : null;
+  return text.trim().split(/\n\s*\n/).map(b=>{
+    const ls=b.trim().split('\n'); if(ls.length<2) return null;
+    const idx=parseInt(ls[0])||0;
+    const ar=ls[1].indexOf('-->'); if(ar<0) return null;
+    const start=ls[1].slice(0,ar).trim(), end=ls[1].slice(ar+3).trim();
+    const txt=ls.slice(2).join('\n').replace(/<[^>]+>/g,'').trim();
+    return txt?{index:idx,start,end,text:txt}:null;
   }).filter(Boolean);
 }
 function parseCSV(text) {
-  return text.trim().split('\n').map((line,i) => {
-    if (i===0 && /^start\s*,/i.test(line)) return null;
-    const parts = line.split(',');
-    if (parts.length >= 3) {
-      const txt = parts.slice(2).join(',').replace(/^"|"$/g,'').trim();
-      return txt ? {index:i, start:parts[0].trim(), end:parts[1].trim(), text:txt} : null;
+  return text.trim().split('\n').map((line,i)=>{
+    if(i===0&&/^start\s*,/i.test(line)) return null;
+    const parts=line.split(',');
+    if(parts.length>=3){
+      const txt=parts.slice(2).join(',').replace(/^"|"$/g,'').trim();
+      return txt?{index:i,start:parts[0].trim(),end:parts[1].trim(),text:txt}:null;
     }
-    const txt = line.replace(/^"|"$/g,'').trim();
-    return txt ? {index:i+1, start:'00:00:00,000', end:'00:00:01,000', text:txt} : null;
-  }).filter(Boolean).map((s,i) => ({...s, index:i+1}));
+    const txt=line.replace(/^"|"$/g,'').trim();
+    return txt?{index:i+1,start:'00:00:00,000',end:'00:00:01,000',text:txt}:null;
+  }).filter(Boolean).map((s,i)=>({...s,index:i+1}));
 }
 function parseTXT(text) {
-  return text.trim().split('\n').filter(l=>l.trim()).map((line,i) => ({
-    index:i+1, start:'00:00:00,000', end:'00:00:01,000', text:line.trim()
+  return text.trim().split('\n').filter(l=>l.trim()).map((line,i)=>({
+    index:i+1,start:'00:00:00,000',end:'00:00:01,000',text:line.trim()
   }));
 }
 
-// Char helpers
-function maxLen() { return outputMode === 'horizontal' ? MAX_H : MAX_V; }
+// ══════════════════════════════════════════════════════════════
+//  CHAR HELPERS
+// ══════════════════════════════════════════════════════════════
 function charStatus(text) {
-  const longest = Math.max(...text.split('\n').map(l=>l.length));
-  if (longest > maxLen()) return 'error';
-  if (longest > Math.floor(maxLen()*0.85)) return 'warn';
+  const lines=text.split('\n'), longest=Math.max(...lines.map(l=>l.length));
+  if(longest>maxLen()||lines.length>settings.maxLinesPerSub) return 'error';
+  if(longest>Math.floor(maxLen()*0.85)) return 'warn';
   return 'ok';
 }
-function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// Render
+// ══════════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════════
 function renderCurrentView() {
-  const area = $('editorArea');
-  area.innerHTML = '';
-  const activeSubs = activeTab === 'source' ? subtitles : (translations[activeTab] ? getFinalSubs(activeTab) : []);
+  const area=$('editorArea'); area.innerHTML='';
+  const activeSubs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
   updatePills(activeSubs);
   updateBtBtn();
-  $('editHint').textContent = (activeTab !== 'source' && translations[activeTab]) ? 'Click any subtitle to edit' : '';
+  $('editHint').textContent=subtitles.length?'Click any subtitle to edit':'';
 
-  if (viewMode === 'compare' && activeTab !== 'source' && translations[activeTab]) {
-    renderCompareView(area, activeSubs);
+  if(viewMode==='compare'&&activeTab!=='source'&&translations[activeTab]) {
+    renderCompareView(area,activeSubs);
   } else {
-    renderListView(area, activeSubs, activeTab !== 'source' && !!translations[activeTab]);
+    renderListView(area,activeSubs,!!subtitles.length);
   }
 }
 
-function renderListView(container, subs, editable) {
-  const pane = el('div', 'editor-pane');
-  const label = activeTab === 'source'
-    ? `Original · ${subtitles.length} entries`
-    : `${activeTab} · ${subs.length} entries`;
-  pane.innerHTML = `<div class="pane-header"><span class="pane-title">${escHtml(label)}</span></div>`;
-  const scroll = el('div', 'pane-scroll');
-  if (!subs.length) {
-    const dz = el('div', 'drop-zone');
-    dz.innerHTML = `<div class="drop-icon">⬚</div><div class="drop-title">Drop a subtitle file here</div><div class="drop-sub">SRT · TXT · CSV — or click to browse</div>`;
+function renderListView(container,subs,editable) {
+  const pane=el('div','editor-pane');
+  const label=activeTab==='source'
+    ?'Original · '+subtitles.length+' entries'
+    :activeTab+' · '+subs.length+' entries';
+  pane.innerHTML=`<div class="pane-header"><span class="pane-title">${escHtml(label)}</span></div>`;
+  const scroll=el('div','pane-scroll');
+  if(!subs.length){
+    const dz=el('div','drop-zone');
+    dz.innerHTML='<div class="drop-icon">⬚</div><div class="drop-title">Drop a subtitle file here</div><div class="drop-sub">SRT · CSV · TXT · XLSX — or click to browse</div>';
     setupDrop(dz); scroll.appendChild(dz);
-  } else {
-    subs.forEach(s => scroll.appendChild(makeCard(s, editable, activeTab)));
-  }
-  pane.appendChild(scroll);
-  container.appendChild(pane);
+  } else { subs.forEach(s=>scroll.appendChild(makeCard(s,editable,activeTab))); }
+  pane.appendChild(scroll); container.appendChild(pane);
 }
 
-function renderCompareView(container, translatedSubs) {
-  const leftPane = el('div', 'editor-pane');
-  leftPane.innerHTML = `<div class="pane-header"><span class="pane-title">Original</span><span style="margin-left:auto;font-size:10px;color:var(--text3)">${subtitles.length} entries</span></div>`;
-  const leftScroll = el('div', 'pane-scroll');
-  subtitles.forEach(s => leftScroll.appendChild(makeCard(s, false, 'source')));
-  leftPane.appendChild(leftScroll);
+function renderCompareView(container,translatedSubs) {
+  const lp=el('div','editor-pane');
+  lp.innerHTML=`<div class="pane-header"><span class="pane-title">Original</span><span style="margin-left:auto;font-size:10px;color:var(--text3)">${subtitles.length} entries</span></div>`;
+  const ls=el('div','pane-scroll');
+  subtitles.forEach(s=>ls.appendChild(makeCard(s,true,'source')));
+  lp.appendChild(ls);
 
-  const rightPane = el('div', 'editor-pane');
-  rightPane.innerHTML = `<div class="pane-header"><span class="pane-title">${escHtml(activeTab)}</span><span style="margin-left:auto;font-size:10px;color:var(--text3)">${translatedSubs.length} entries</span></div>`;
-  const rightScroll = el('div', 'pane-scroll');
-  translatedSubs.forEach(s => rightScroll.appendChild(makeCard(s, true, activeTab)));
-  rightPane.appendChild(rightScroll);
+  const rp=el('div','editor-pane');
+  rp.innerHTML=`<div class="pane-header"><span class="pane-title">${escHtml(activeTab)}</span><span style="margin-left:auto;font-size:10px;color:var(--text3)">${translatedSubs.length} entries</span></div>`;
+  const rs=el('div','pane-scroll');
+  translatedSubs.forEach(s=>rs.appendChild(makeCard(s,true,activeTab)));
+  rp.appendChild(rs);
 
-  container.appendChild(leftPane);
-  container.appendChild(rightPane);
-  setupScrollSync([leftScroll, rightScroll]);
+  container.appendChild(lp); container.appendChild(rp);
+  setupScrollSync([ls,rs]);
 }
 
-// Card factory
-function makeCard(sub, editable, lang) {
-  const st = charStatus(sub.text);
-  const longest = Math.max(...sub.text.split('\n').map(l=>l.length));
-  const pct = Math.min(100, Math.round(longest/maxLen()*100));
-  const card = el('div', 'sub-card' + (st==='error'?' error':st==='warn'?' warn':'') + (editable?' editable':''));
-  card.dataset.idx = sub.index;
-  card.dataset.lang = lang;
-  card.innerHTML =
-    `<div class="sub-idx">#${sub.index}</div>` +
-    `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>` +
-    (editable ? `<svg class="edit-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>` : '') +
-    `<div class="sub-text">${escHtml(sub.text)}</div>` +
+// ══════════════════════════════════════════════════════════════
+//  CARD FACTORY
+// ══════════════════════════════════════════════════════════════
+function makeCard(sub,editable,lang) {
+  const st=charStatus(sub.text);
+  const longest=Math.max(...sub.text.split('\n').map(l=>l.length));
+  const pct=Math.min(100,Math.round(longest/maxLen()*100));
+  const card=el('div','sub-card'+(st==='error'?' error':st==='warn'?' warn':'')+(editable?' editable':''));
+  card.dataset.idx=sub.index; card.dataset.lang=lang;
+  card.innerHTML=
+    `<div class="sub-idx">#${sub.index}</div>`+
+    `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>`+
+    (editable?`<svg class="edit-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`:'')+
+    `<div class="sub-text">${escHtml(sub.text)}</div>`+
     `<div class="sub-meta"><span class="sub-chars ${st==='ok'?'':st}">${longest}/${maxLen()}</span><div class="char-bar"><div class="char-bar-fill ${st==='ok'?'':st}" style="width:${pct}%"></div></div></div>`;
-  if (editable) card.addEventListener('click', () => openEdit(card, sub, lang));
+  if(editable) card.addEventListener('click',()=>openEdit(card,sub,lang));
 
-  if (lang !== 'source' && backTranslations[lang]) {
-    const btSub = backTranslations[lang].find(s => s.index === sub.index);
-    if (btSub) {
-      const srcSub = subtitles.find(s => s.index === sub.index);
-      const diffHtml = srcSub ? wordDiff(srcSub.text, btSub.text) : escHtml(btSub.text);
+  if(lang!=='source'&&backTranslations[lang]) {
+    const bt=backTranslations[lang].find(s=>s.index===sub.index);
+    if(bt) {
+      const src=subtitles.find(s=>s.index===sub.index);
       card.insertAdjacentHTML('beforeend',
-        '<div class="back-trans">' +
-          '<div class="back-trans-label">Back-trans</div>' +
-          '<div class="back-trans-text">' + diffHtml + '</div>' +
-        '</div>');
+        '<div class="back-trans"><div class="back-trans-label">Back-trans</div>'+
+        '<div class="back-trans-text">'+(src?wordDiff(src.text,bt.text):escHtml(bt.text))+'</div></div>');
     }
   }
-
   return card;
 }
 
-// Inline editing
-// Track currently open edit card globally
-let currentEditCard = null;
-let backTranslations = {};
-
-function openEdit(card, sub, lang) {
-  // If clicking the already-open card, do nothing
-  if (card === currentEditCard) return;
-  // Close any currently open card first (auto-save it)
-  if (currentEditCard) commitEdit(currentEditCard);
-
-  currentEditCard = card;
+// ══════════════════════════════════════════════════════════════
+//  INLINE EDITING  (source + translations)
+// ══════════════════════════════════════════════════════════════
+function openEdit(card,sub,lang) {
+  if(card===currentEditCard) return;
+  if(currentEditCard) commitEdit(currentEditCard);
+  currentEditCard=card;
   card.classList.add('editing');
-  const textEl = card.querySelector('.sub-text');
+  const textEl=card.querySelector('.sub-text');
+  const ta=el('textarea','edit-textarea');
+  ta.value=sub.text; ta.rows=Math.max(2,sub.text.split('\n').length+1);
+  textEl.replaceWith(ta); ta.focus(); ta.selectionStart=ta.selectionEnd=ta.value.length;
 
-  const ta = el('textarea', 'edit-textarea');
-  ta.value = sub.text;
-  ta.rows = Math.max(2, sub.text.split('\n').length + 1);
-  textEl.replaceWith(ta);
-  ta.focus();
-  ta.selectionStart = ta.selectionEnd = ta.value.length;
-
-  // Live char bar update
-  ta.addEventListener('input', () => {
-    const st = charStatus(ta.value);
-    const longest = Math.max(...ta.value.split('\n').map(l=>l.length));
-    const pct = Math.min(100, Math.round(longest/maxLen()*100));
-    card.querySelector('.sub-chars').textContent = `${longest}/${maxLen()}`;
-    card.querySelector('.sub-chars').className = 'sub-chars' + (st==='ok'?'':' '+st);
-    card.querySelector('.char-bar-fill').style.width = pct+'%';
-    card.querySelector('.char-bar-fill').className = 'char-bar-fill' + (st==='ok'?'':' '+st);
+  ta.addEventListener('input',()=>{
+    const st=charStatus(ta.value), longest=Math.max(...ta.value.split('\n').map(l=>l.length));
+    const pct=Math.min(100,Math.round(longest/maxLen()*100));
+    card.querySelector('.sub-chars').textContent=longest+'/'+maxLen();
+    card.querySelector('.sub-chars').className='sub-chars'+(st==='ok'?'':' '+st);
+    card.querySelector('.char-bar-fill').style.width=pct+'%';
+    card.querySelector('.char-bar-fill').className='char-bar-fill'+(st==='ok'?'':' '+st);
   });
-
-  // Auto-save on blur (click away)
-  ta.addEventListener('blur', () => {
-    // Small delay so clicking another card triggers openEdit before this blur fires
-    setTimeout(() => { if (currentEditCard === card) commitEdit(card); }, 80);
-  });
-
-  // Escape closes without saving
-  ta.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelEdit(card, sub.text, lang, sub);
-    }
-  });
+  ta.addEventListener('blur',()=>{setTimeout(()=>{if(currentEditCard===card)commitEdit(card);},80);});
+  ta.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();cancelEdit(card,sub.text,lang);}});
 }
 
 function commitEdit(card) {
-  const ta = card.querySelector('.edit-textarea');
-  if (!ta) return;
-  const lang = card.dataset.lang;
-  const idx = parseInt(card.dataset.idx);
-  const newText = ta.value;
-  const found = translations[lang]?.find(s => s.index === idx);
-  if (found) { found.text = newText; }
-  closeEditCard(card, newText, lang);
-  updatePills(getFinalSubs(lang));
+  const ta=card.querySelector('.edit-textarea'); if(!ta) return;
+  const lang=card.dataset.lang, idx=parseInt(card.dataset.idx), newText=ta.value;
+  if(lang==='source') {
+    const f=subtitles.find(s=>s.index===idx); if(f) f.text=newText;
+  } else {
+    const f=translations[lang]?.find(s=>s.index===idx); if(f) f.text=newText;
+  }
+  closeEditCard(card,newText,lang);
+  updatePills(lang==='source'?subtitles:getFinalSubs(lang));
 }
-
-function cancelEdit(card, originalText, lang, sub) {
-  currentEditCard = null;
-  closeEditCard(card, originalText, lang);
-}
-
-function closeEditCard(card, text, lang) {
-  currentEditCard = null;
-  card.classList.remove('editing');
-  const ta = card.querySelector('.edit-textarea');
-  const st = charStatus(text);
-  const newTextEl = el('div', 'sub-text');
-  newTextEl.textContent = text;
-  if (ta) ta.replaceWith(newTextEl);
-  card.className = 'sub-card' + (st==='error'?' error':st==='warn'?' warn':'') + ' editable';
-  // Re-attach click using live lookup from translations store
-  card.onclick = () => {
-    const idx = parseInt(card.dataset.idx);
-    const lg = card.dataset.lang;
-    const sub = translations[lg]?.find(s => s.index === idx);
-    if (sub) openEdit(card, sub, lg);
+function cancelEdit(card,orig,lang) { currentEditCard=null; closeEditCard(card,orig,lang); }
+function closeEditCard(card,text,lang) {
+  currentEditCard=null; card.classList.remove('editing');
+  const ta=card.querySelector('.edit-textarea');
+  const st=charStatus(text), ntEl=el('div','sub-text'); ntEl.textContent=text;
+  if(ta) ta.replaceWith(ntEl);
+  card.className='sub-card'+(st==='error'?' error':st==='warn'?' warn':'')+' editable';
+  card.onclick=()=>{
+    const idx=parseInt(card.dataset.idx), lg=card.dataset.lang;
+    const s=lg==='source'?subtitles.find(s=>s.index===idx):translations[lg]?.find(s=>s.index===idx);
+    if(s) openEdit(card,s,lg);
   };
 }
 
-// Scroll sync
+// ══════════════════════════════════════════════════════════════
+//  SCROLL SYNC
+// ══════════════════════════════════════════════════════════════
 function setupScrollSync(panes) {
-  if (panes.length < 2) return;
-  let syncing = false;
-  panes.forEach((pane, i) => {
-    pane.addEventListener('scroll', () => {
-      if (syncing) return; syncing = true;
-      const ratio = pane.scrollTop / (pane.scrollHeight - pane.clientHeight || 1);
-      panes.forEach((other, j) => { if (j!==i) other.scrollTop = ratio*(other.scrollHeight-other.clientHeight); });
-      requestAnimationFrame(() => syncing = false);
+  let syncing=false;
+  panes.forEach((p,i)=>{
+    p.addEventListener('scroll',()=>{
+      if(syncing) return; syncing=true;
+      const r=p.scrollTop/(p.scrollHeight-p.clientHeight||1);
+      panes.forEach((o,j)=>{if(j!==i)o.scrollTop=r*(o.scrollHeight-o.clientHeight);});
+      requestAnimationFrame(()=>syncing=false);
     });
   });
 }
 
-// Drop zone
+// ══════════════════════════════════════════════════════════════
+//  DROP ZONE
+// ══════════════════════════════════════════════════════════════
 function setupDrop(dz) {
-  dz.addEventListener('click', () => $('fileInput').click());
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-  dz.addEventListener('drop', e => {
+  dz.addEventListener('click',()=>$('fileInput').click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop',e=>{
     e.preventDefault(); dz.classList.remove('drag');
-    const f = e.dataTransfer.files[0]; if (!f) return;
-    const r = new FileReader(); r.onload = ev => parseContent(ev.target.result, f.name); r.readAsText(f);
+    const f=e.dataTransfer.files[0]; if(!f) return;
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    if(ext==='xlsx'){const r=new FileReader();r.onload=ev=>parseXLSXBuffer(ev.target.result,f.name);r.readAsArrayBuffer(f);}
+    else{const r=new FileReader();r.onload=ev=>parseContent(ev.target.result,f.name);r.readAsText(f);}
   });
 }
 
-// Pills
+// ══════════════════════════════════════════════════════════════
+//  PILLS & STATUS
+// ══════════════════════════════════════════════════════════════
 function updatePills(subs) {
-  $('countPill').textContent = (subs||[]).length + ' subs';
-  const warns = (subs||[]).filter(s=>charStatus(s.text)==='warn').length;
-  const errs  = (subs||[]).filter(s=>charStatus(s.text)==='error').length;
-  $('warnPill').style.display = warns ? 'inline':'none'; $('warnPill').textContent = warns+' warnings';
-  $('errPill').style.display  = errs  ? 'inline':'none'; $('errPill').textContent  = errs+' errors';
-  const fixBtn = $('fixBtn');
-  if (fixBtn) fixBtn.style.display = (errs > 0 && activeTab !== 'source') ? 'flex' : 'none';
+  $('countPill').textContent=(subs||[]).length+' subs';
+  const warns=(subs||[]).filter(s=>charStatus(s.text)==='warn').length;
+  const errs =(subs||[]).filter(s=>charStatus(s.text)==='error').length;
+  $('warnPill').style.display=warns?'inline':'none'; $('warnPill').textContent=warns+' warnings';
+  $('errPill').style.display =errs ?'inline':'none'; $('errPill').textContent =errs+' errors';
+  const fb=$('fixBtn');
+  if(fb) fb.style.display=(errs>0&&activeTab!=='source')?'flex':'none';
+}
+function setStatus(msg,type) {
+  $('statusMsg').textContent=msg; $('statusMsg').className='status-msg'+(type?' '+type:'');
+}
+function updateExportAllBtn() {
+  $('exportAllBtn').disabled=Object.keys(translations).length===0;
 }
 
-function setStatus(msg, type) {
-  $('statusMsg').textContent = msg;
-  $('statusMsg').className = 'status-msg' + (type ? ' '+type : '');
-}
-
-// Vertical split
+// ══════════════════════════════════════════════════════════════
+//  VERTICAL SPLIT & TIMECODE HELPERS
+// ══════════════════════════════════════════════════════════════
 function getFinalSubs(lang) {
-  const subs = translations[lang] || [];
-  return outputMode === 'vertical' ? splitForVertical(subs) : subs;
+  const s=translations[lang]||[];
+  return outputMode==='vertical'?splitForVertical(s):s;
 }
 function splitForVertical(subs) {
-  const result = []; let idx = 1;
-  subs.forEach(sub => {
-    const lines = sub.text.split('\n');
-    if (!lines.some(l=>l.length>MAX_V) && lines.length<=2) { result.push({...sub,index:idx++}); return; }
-    const all = lines.join(' ').trim();
-    let split = all.lastIndexOf(' ', Math.ceil(all.length/2)); if (split<1) split=Math.ceil(all.length/2);
-    const mid = midTimecode(sub.start, sub.end);
+  const result=[]; let idx=1;
+  subs.forEach(sub=>{
+    const lines=sub.text.split('\n');
+    if(!lines.some(l=>l.length>settings.maxCharsV)&&lines.length<=settings.maxLinesPerSub){result.push({...sub,index:idx++});return;}
+    const all=lines.join(' ').trim();
+    let split=all.lastIndexOf(' ',Math.ceil(all.length/2)); if(split<1)split=Math.ceil(all.length/2);
+    const mid=midTimecode(sub.start,sub.end);
     result.push({index:idx++,start:sub.start,end:mid,text:all.slice(0,split).trim()});
     result.push({index:idx++,start:mid,end:sub.end,text:all.slice(split).trim()});
   });
   return result;
 }
-function tcToMs(t) {
-  const [h,m,rest] = t.replace(',','.').split(':'); const [s,ms] = rest.split('.');
-  return ((+h)*3600+(+m)*60+(+s))*1000+(+(ms||0));
-}
-function msToTc(ms) {
-  const h=Math.floor(ms/3600000);ms%=3600000;const m=Math.floor(ms/60000);ms%=60000;
-  const s=Math.floor(ms/1000);ms%=1000;
-  return `${pad(h)}:${pad(m)}:${pad(s)},${String(ms).padStart(3,'0')}`;
-}
+function tcToMs(t){const[h,m,rest]=t.replace(',','.').split(':');const[s,ms]=rest.split('.');return((+h)*3600+(+m)*60+(+s))*1000+(+(ms||0));}
+function msToTc(ms){const h=Math.floor(ms/3600000);ms%=3600000;const m=Math.floor(ms/60000);ms%=60000;const s=Math.floor(ms/1000);ms%=1000;return`${pad(h)}:${pad(m)}:${pad(s)},${String(ms).padStart(3,'0')}`;}
 function pad(n){return String(n).padStart(2,'0');}
-function midTimecode(start,end){return msToTc(Math.round((tcToMs(start)+tcToMs(end))/2));}
+function midTimecode(a,b){return msToTc(Math.round((tcToMs(a)+tcToMs(b))/2));}
 
-// ── Unified provider call ──
-async function callProvider(prompt, key, retries=3) {
-  const model = $('modelSelect').value;
-  const sleep = ms => new Promise(r=>setTimeout(r,ms));
-  for (let attempt=0; attempt<retries; attempt++) {
-    try {
+// ══════════════════════════════════════════════════════════════
+//  UNIFIED PROVIDER CALL  (translation)
+// ══════════════════════════════════════════════════════════════
+async function callProvider(prompt,key,retries=3) {
+  const model=$('modelSelect').value;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  for(let attempt=0;attempt<retries;attempt++){
+    try{
       let rawText;
-      if (activeProvider === 'gemini') {
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-          { method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096}}) }
-        );
-        const data = await resp.json();
-        if (data.error) {
-          const is429 = data.error.code===429||(data.error.message||'').includes('quota');
-          const err = new Error(data.error.message); err.is429=is429; throw err;
-        }
-        rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      if(activeProvider==='gemini'){
+        const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          {method:'POST',headers:{'Content-Type':'application/json'},
+           body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096}})});
+        const data=await resp.json();
+        if(data.error){const e=new Error(data.error.message);e.is429=data.error.code===429||(data.error.message||'').includes('quota');throw e;}
+        rawText=data?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
       } else {
-        const baseURLs = {
-          groq:       'https://api.groq.com/openai/v1/chat/completions',
-          openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-          mistral:    'https://api.mistral.ai/v1/chat/completions',
-        };
-        const resp = await fetch(baseURLs[activeProvider], {
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-          body:JSON.stringify({model, temperature:0.3, max_tokens:4096,
-            messages:[{role:'user',content:prompt}]})
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.error) {
-          const msg = data?.error?.message || `HTTP ${resp.status}`;
-          const err = new Error(msg); err.is429 = resp.status===429; throw err;
-        }
-        rawText = data?.choices?.[0]?.message?.content || '[]';
+        const urls={groq:'https://api.groq.com/openai/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',mistral:'https://api.mistral.ai/v1/chat/completions'};
+        const resp=await fetch(urls[activeProvider],{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+          body:JSON.stringify({model,temperature:0.3,max_tokens:4096,messages:[{role:'user',content:prompt}]})});
+        const data=await resp.json();
+        if(!resp.ok||data.error){const e=new Error(data?.error?.message||'HTTP '+resp.status);e.is429=resp.status===429;throw e;}
+        rawText=data?.choices?.[0]?.message?.content||'[]';
       }
       return rawText;
-    } catch(e) {
-      if (e.is429 && attempt<retries-1) {
-        const w = 30000*(attempt+1);
-        for (let c=Math.round(w/1000); c>0; c--) {
-          setStatus(`Rate limit — retry in ${c}s… (${attempt+1}/${retries})`);
-          await sleep(1000);
-        }
+    } catch(e){
+      if(e.is429&&attempt<retries-1){
+        const w=30000*(attempt+1);
+        for(let c=Math.round(w/1000);c>0;c--){setStatus(`Rate limit — retry in ${c}s… (${attempt+1}/${retries})`);await sleep(1000);}
         continue;
       }
       throw e;
@@ -1043,590 +1172,372 @@ async function callProvider(prompt, key, retries=3) {
   }
 }
 
-// Translation
+// ══════════════════════════════════════════════════════════════
+//  TRANSLATION
+// ══════════════════════════════════════════════════════════════
 async function startTranslation() {
-  const key = $('apiKey').value.trim();
-  if (!key) { setStatus('Enter a Gemini API key first','err'); return; }
-  if (!subtitles.length) { setStatus('Import subtitles first','err'); return; }
+  const key=($('apiKey').value||'').trim();
+  if(!key){setStatus('Enter an API key first','err');return;}
+  if(!subtitles.length){setStatus('Import subtitles first','err');return;}
+  const lang=getTargetLang(); if(!lang){setStatus('Enter a target language','err');return;}
+  const srcLang=$('srcLangSelect').value;
+  const srcNote=srcLang!=='Auto-detect'?' from '+srcLang:'';
+  $('translateBtn').disabled=true; $('exportBtn').disabled=true;
+  const fill=$('progressFill'); fill.style.width='0%'; setStatus('Translating…');
+  const snap=[...subtitles], result=[];
+  const BATCH=window._providerBatch||30, PAUSE=window._providerPause||10000;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-  const lang = getTargetLang();
-  if (!lang) { setStatus('Enter a target language', 'err'); return; }
-  const srcLang = $('srcLangSelect').value;
-  const srcLangNote = srcLang !== 'Auto-detect' ? ' from ' + srcLang : '';
-  $('translateBtn').disabled = true;
-  $('exportBtn').disabled = true;
-  const fill = $('progressFill');
-  fill.style.width = '0%';
-  setStatus('Translating…');
-
-  const snap = [...subtitles];
-  const result = [];
-  const BATCH = window._providerBatch || 30;
-  const PAUSE = window._providerPause || 10000;
-  const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-  for (let i=0; i<snap.length; i+=BATCH) {
-    if (i>0) {
-      for (let c=Math.round(PAUSE/1000); c>0; c--) {
-        setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);
-        await sleep(1000);
-      }
-    }
-    const batch = snap.slice(i,i+BATCH);
-    const prompt = [
-      `You are a professional subtitle translator. Translate each subtitle${srcLangNote} to ${lang}.`,
+  for(let i=0;i<snap.length;i+=BATCH){
+    if(i>0){for(let c=Math.round(PAUSE/1000);c>0;c--){setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);await sleep(1000);}}
+    const batch=snap.slice(i,i+BATCH);
+    const prompt=[
+      `You are a professional subtitle translator. Translate each subtitle${srcNote} to ${lang}.`,
       `Rules:`,`- Preserve meaning and natural spoken rhythm`,
       `- Keep line breaks using \\n if the source has them`,
       `- Return ONLY a JSON array of strings, one per subtitle, in order`,
       `- No explanations, no markdown, no extra text`,``,
       `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))
     ].join('\n');
-    try {
-      const raw = await callProvider(prompt, key);
-      let parsed; try { parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim()); } catch { parsed=batch.map(s=>s.text); }
+    try{
+      const raw=await callProvider(prompt,key);
+      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
       setStatus(`Translating… ${Math.min(i+BATCH,snap.length)}/${snap.length}`);
-    } catch(e) { setStatus('Error: '+e.message,'err'); $('translateBtn').disabled=false; return; }
-    fill.style.width = Math.round((i+batch.length)/snap.length*100)+'%';
+    }catch(e){setStatus('Error: '+e.message,'err');$('translateBtn').disabled=false;return;}
+    fill.style.width=Math.round((i+batch.length)/snap.length*100)+'%';
   }
 
-  translations[lang] = result;
-  activeTab = lang;
-  $('exportBtn').disabled = false;
-  $('translateBtn').disabled = false;
-  fill.style.width = '100%';
-  setStatus(`Done — ${result.length} subtitles`,'ok');
-  rebuildTabs(); renderCurrentView();
+  translations[lang]=result; activeTab=lang;
+  $('exportBtn').disabled=false; $('translateBtn').disabled=false;
+  fill.style.width='100%'; setStatus('Done — '+result.length+' subtitles','ok');
+  updateExportAllBtn(); rebuildTabs(); renderCurrentView();
 }
 
-// ── Fix overlength subtitles ──
-// ── Fix overlength: pure JS reflow (instant), AI only if rephrase toggle is on ──
-
-function reflowText(text, limit) {
-  // Flatten existing lines into one string
-  const flat = text.replace(/\n/g, ' ').replace(/  +/g, ' ').trim();
-  if (flat.length <= limit) return flat;
-
-  // Try every word-boundary split, pick most balanced where both halves fit
-  const words = flat.split(' ');
-  let bestSplit = -1, bestScore = Infinity;
-  for (let i = 1; i < words.length; i++) {
-    const l1 = words.slice(0, i).join(' ');
-    const l2 = words.slice(i).join(' ');
-    if (l1.length > limit || l2.length > limit) continue;
-    const score = Math.abs(l1.length - l2.length);
-    if (score < bestScore) { bestScore = score; bestSplit = i; }
+// ══════════════════════════════════════════════════════════════
+//  FIX OVERLENGTH
+// ══════════════════════════════════════════════════════════════
+function reflowText(text,limit) {
+  const flat=text.replace(/\n/g,' ').replace(/  +/g,' ').trim();
+  if(flat.length<=limit) return flat;
+  const words=flat.split(' '); let bestSplit=-1,bestScore=Infinity;
+  for(let i=1;i<words.length;i++){
+    const l1=words.slice(0,i).join(' '),l2=words.slice(i).join(' ');
+    if(l1.length>limit||l2.length>limit) continue;
+    const score=Math.abs(l1.length-l2.length); if(score<bestScore){bestScore=score;bestSplit=i;}
   }
-  if (bestSplit > 0) {
-    return words.slice(0, bestSplit).join(' ') + '\n' + words.slice(bestSplit).join(' ');
-  }
-  // Fallback: hard-cut at last word before limit
-  const cut = flat.lastIndexOf(' ', limit);
-  if (cut > 0) return flat.slice(0, cut) + '\n' + flat.slice(cut + 1);
-  return flat.slice(0, limit) + '\n' + flat.slice(limit);
+  if(bestSplit>0) return words.slice(0,bestSplit).join(' ')+'\n'+words.slice(bestSplit).join(' ');
+  const cut=flat.lastIndexOf(' ',limit); if(cut>0) return flat.slice(0,cut)+'\n'+flat.slice(cut+1);
+  return flat.slice(0,limit)+'\n'+flat.slice(limit);
 }
-
 
 async function fixOverlength() {
-  if (activeTab === 'source' || !translations[activeTab]) return;
-  const lang = activeTab;
-  const subs = translations[lang];
-  const limit = maxLen();
-  const allowRephrase = $('allowRephrase')?.checked;
-  const toFix = subs.filter(s => charStatus(s.text) === 'error');
-  if (!toFix.length) return;
+  if(activeTab==='source'||!translations[activeTab]) return;
+  const lang=activeTab, subs=translations[lang], limit=maxLen();
+  const allowRephrase=$('allowRephrase')?.checked;
+  const toFix=subs.filter(s=>charStatus(s.text)==='error'); if(!toFix.length) return;
+  const fixBtn=$('fixBtn');
+  const wandIcon=`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/></svg>`;
 
-  const fixBtn = $('fixBtn');
-  const wandIcon = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/><path d="M12 4l-8 8"/><path d="M1 13l2-2"/><path d="M13.5 0.5l2 2-1 1-2-2 1-1z"/></svg>`;
-
-  // ── Default path: pure JS reflow, instant, no API needed ──
-  if (!allowRephrase) {
-    let fixed = 0;
-    toFix.forEach(s => {
-      const found = subs.find(x => x.index === s.index);
-      if (!found) return;
-      const reflowed = reflowText(found.text, limit);
-      if (reflowed !== found.text) { found.text = reflowed; fixed++; }
-    });
-    setStatus(`Fixed ${fixed} subtitle${fixed !== 1 ? 's' : ''}`, 'ok');
-    renderCurrentView();
-    return;
+  if(!allowRephrase){
+    let fixed=0;
+    toFix.forEach(s=>{const f=subs.find(x=>x.index===s.index);if(!f)return;const r=reflowText(f.text,limit);if(r!==f.text){f.text=r;fixed++;}});
+    setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok'); renderCurrentView(); return;
   }
-
-  // ── Rephrase path: use AI ──
-  const key = $('apiKey').value.trim();
-  if (!key) { setStatus('Enter an API key first', 'err'); return; }
-
-  fixBtn.disabled = true;
-  fixBtn.innerHTML = '<span class="suggest-spinner"></span> Fixing…';
-  setStatus(`Fixing ${toFix.length} subtitle${toFix.length > 1 ? 's' : ''}…`);
-
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const BATCH = 15;
-  let fixed = 0;
-
-  for (let i = 0; i < toFix.length; i += BATCH) {
-    if (i > 0) {
-      for (let c = 5; c > 0; c--) {
-        setStatus(`Fixing… ${i}/${toFix.length} — next in ${c}s…`);
-        await sleep(1000);
-      }
-    }
-    const batch = toFix.slice(i, i + BATCH);
-    const srcTexts = batch.map(s => subtitles.find(o => o.index === s.index)?.text || '');
-    const prompt = `You are a professional subtitle editor. Each subtitle in ${lang} is too long (max ${limit} chars/line, max 2 lines). Rephrase each one slightly to fit — keep the exact same meaning. Split into 2 lines using \n where natural. Return ONLY a JSON array of strings, one per subtitle, no extra text.
-
-Source texts:
-${JSON.stringify(srcTexts)}
-
-Current translations:
-${JSON.stringify(batch.map(s => s.text))}`;
-
-    try {
-      const raw = await callProvider(prompt, key, 3);
-      let parsed;
-      try { parsed = JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g, '').trim()); }
-      catch { parsed = null; }
-      if (Array.isArray(parsed)) {
-        batch.forEach((s, j) => {
-          if (parsed[j] !== undefined) {
-            const found = subs.find(x => x.index === s.index);
-            if (found) { found.text = parsed[j]; fixed++; }
-          }
-        });
-      }
-    } catch(e) {
-      setStatus('Fix error: ' + e.message, 'err');
-      fixBtn.disabled = false;
-      fixBtn.innerHTML = wandIcon + ' Fix';
-      return;
-    }
-    $('progressFill').style.width = Math.round((i + batch.length) / toFix.length * 100) + '%';
+  const key=($('apiKey').value||'').trim(); if(!key){setStatus('Enter an API key first','err');return;}
+  fixBtn.disabled=true; fixBtn.innerHTML='<span class="suggest-spinner"></span> Fixing…';
+  setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const BATCH=15; let fixed=0;
+  for(let i=0;i<toFix.length;i+=BATCH){
+    if(i>0){for(let c=5;c>0;c--){setStatus(`Fixing… ${i}/${toFix.length} — next in ${c}s…`);await sleep(1000);}}
+    const batch=toFix.slice(i,i+BATCH);
+    const srcTexts=batch.map(s=>subtitles.find(o=>o.index===s.index)?.text||'');
+    const prompt=`You are a professional subtitle editor. Each subtitle in ${lang} is too long (max ${limit} chars/line, max ${settings.maxLinesPerSub} lines). Rephrase slightly to fit — keep exact meaning. Split with \\n. Return ONLY a JSON array.\n\nSource:\n${JSON.stringify(srcTexts)}\n\nTranslations:\n${JSON.stringify(batch.map(s=>s.text))}`;
+    try{
+      const raw=await callProvider(prompt,key,3);
+      let parsed; try{parsed=JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g,'').trim());}catch{parsed=null;}
+      if(Array.isArray(parsed)) batch.forEach((s,j)=>{if(parsed[j]!==undefined){const f=subs.find(x=>x.index===s.index);if(f){f.text=parsed[j];fixed++;}}});
+    }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';return;}
+    $('progressFill').style.width=Math.round((i+batch.length)/toFix.length*100)+'%';
   }
-
-  setStatus(`Fixed ${fixed} subtitle${fixed !== 1 ? 's' : ''}`, 'ok');
-  fixBtn.disabled = false;
-  fixBtn.innerHTML = wandIcon + ' Fix';
-  $('progressFill').style.width = '0%';
+  setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok');
+  fixBtn.disabled=false; fixBtn.innerHTML=wandIcon+' Fix'; $('progressFill').style.width='0%';
   renderCurrentView();
 }
 
-// ── Back-translation ──
+// ══════════════════════════════════════════════════════════════
+//  BACK-TRANSLATION
+// ══════════════════════════════════════════════════════════════
 function updateBtBtn() {
-  const btn = $('btBtn');
-  if (!btn) return;
-  const show = activeTab !== 'source' && !!translations[activeTab];
-  btn.style.display = show ? 'flex' : 'none';
-  const hasData = !!backTranslations[activeTab];
-  btn.className = 'bt-btn' + (hasData ? ' on' : '');
-  btn.textContent = hasData ? '↩ Hide back-trans' : '↩ Back-translate';
+  const btn=$('btBtn'); if(!btn) return;
+  const show=activeTab!=='source'&&!!translations[activeTab];
+  btn.style.display=show?'flex':'none';
+  const has=!!backTranslations[activeTab];
+  btn.className='bt-btn'+(has?' on':''); btn.textContent=has?'↩ Hide back-trans':'↩ Back-translate';
 }
-
-function wordDiff(source, backTrans) {
-  const tokA = source.replace(/\n/g, ' ').split(/\s+/).filter(Boolean);
-  const tokB = backTrans.replace(/\n/g, ' ').split(/\s+/).filter(Boolean);
-  if (!tokA.length) return escHtml(backTrans);
-  if (!tokB.length) return '';
-  if (tokA.length * tokB.length > 10000) return escHtml(backTrans);
-
-  const m = tokA.length, n = tokB.length;
-  const dp = Array.from({length: m + 1}, () => new Int16Array(n + 1));
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = tokA[i-1].toLowerCase() === tokB[j-1].toLowerCase()
-        ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
-
-  const ops = [];
-  let i = m, j = n;
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && tokA[i-1].toLowerCase() === tokB[j-1].toLowerCase()) {
-      ops.unshift({type:'eq', val:tokB[j-1]}); i--; j--;
-    } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
-      ops.unshift({type:'ins', val:tokB[j-1]}); j--;
-    } else {
-      ops.unshift({type:'del', val:tokA[i-1]}); i--;
-    }
+function wordDiff(source,backTrans) {
+  const tokA=source.replace(/\n/g,' ').split(/\s+/).filter(Boolean);
+  const tokB=backTrans.replace(/\n/g,' ').split(/\s+/).filter(Boolean);
+  if(!tokA.length) return escHtml(backTrans); if(!tokB.length) return '';
+  if(tokA.length*tokB.length>10000) return escHtml(backTrans);
+  const m=tokA.length,n=tokB.length;
+  const dp=Array.from({length:m+1},()=>new Int16Array(n+1));
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    dp[i][j]=tokA[i-1].toLowerCase()===tokB[j-1].toLowerCase()?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+  const ops=[]; let i=m,j=n;
+  while(i>0||j>0){
+    if(i>0&&j>0&&tokA[i-1].toLowerCase()===tokB[j-1].toLowerCase()){ops.unshift({t:'eq',v:tokB[j-1]});i--;j--;}
+    else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])){ops.unshift({t:'ins',v:tokB[j-1]});j--;}
+    else{ops.unshift({t:'del',v:tokA[i-1]});i--;}
   }
-  return ops.map(op => {
-    if (op.type === 'eq')  return escHtml(op.val);
-    if (op.type === 'ins') return `<span class="diff-ins">${escHtml(op.val)}</span>`;
-    return `<span class="diff-del">${escHtml(op.val)}</span>`;
-  }).join(' ');
+  return ops.map(op=>op.t==='eq'?escHtml(op.v):op.t==='ins'?`<span class="diff-ins">${escHtml(op.v)}</span>`:`<span class="diff-del">${escHtml(op.v)}</span>`).join(' ');
 }
-
 async function startBackTranslation() {
-  const lang = activeTab;
-  if (!translations[lang]) return;
-
-  if (backTranslations[lang]) {
-    delete backTranslations[lang];
-    renderCurrentView();
-    return;
-  }
-
-  const key = $('apiKey').value.trim();
-  if (!key) { setStatus('Enter an API key first', 'err'); return; }
-
-  const srcLangVal = $('srcLangSelect').value;
-  const srcLang = srcLangVal === 'Auto-detect' ? 'the original language' : srcLangVal;
-
-  const btn = $('btBtn');
-  btn.disabled = true;
-  btn.textContent = 'Back-translating…';
+  const lang=activeTab; if(!translations[lang]) return;
+  if(backTranslations[lang]){delete backTranslations[lang];renderCurrentView();return;}
+  const key=($('apiKey').value||'').trim(); if(!key){setStatus('Enter an API key first','err');return;}
+  const srcLangVal=$('srcLangSelect').value;
+  const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
+  const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
   setStatus(`Back-translating to ${srcLang}…`);
-
-  const subs = translations[lang];
-  const BATCH = window._providerBatch || 30;
-  const PAUSE = window._providerPause || 10000;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const fill = $('progressFill');
-  fill.style.width = '0%';
-  const result = [];
-
-  for (let i = 0; i < subs.length; i += BATCH) {
-    if (i > 0) {
-      for (let c = Math.round(PAUSE / 1000); c > 0; c--) {
-        setStatus(`Back-translating… ${i}/${subs.length} — next batch in ${c}s…`);
-        await sleep(1000);
-      }
-    }
-    const batch = subs.slice(i, i + BATCH);
-    const prompt = [
-      `You are a professional subtitle translator. Translate each subtitle from ${lang} back to ${srcLang}.`,
-      `Rules:`,
-      `- Translate literally and accurately — this is for quality checking`,
-      `- Keep line breaks using \\n if the source has them`,
-      `- Return ONLY a JSON array of strings, one per subtitle, in order`,
-      `- No explanations, no markdown, no extra text`,
-      ``,
-      `Source subtitles (JSON array):`,
-      JSON.stringify(batch.map(s => s.text))
-    ].join('\n');
-
-    try {
-      const raw = await callProvider(prompt, key);
-      let parsed;
-      try { parsed = JSON.parse(raw.replace(/```json\n?|```\n?/g, '').trim()); }
-      catch { parsed = batch.map(s => s.text); }
-      batch.forEach((s, j) => result.push({...s, text: parsed[j] !== undefined ? parsed[j] : s.text}));
-      setStatus(`Back-translating… ${Math.min(i + BATCH, subs.length)}/${subs.length}`);
-    } catch(e) {
-      setStatus('Error: ' + e.message, 'err');
-      btn.disabled = false;
-      updateBtBtn();
-      return;
-    }
-    fill.style.width = Math.round((i + batch.length) / subs.length * 100) + '%';
+  const subs=translations[lang], BATCH=window._providerBatch||30, PAUSE=window._providerPause||10000;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const fill=$('progressFill'); fill.style.width='0%';
+  const result=[];
+  for(let i=0;i<subs.length;i+=BATCH){
+    if(i>0){for(let c=Math.round(PAUSE/1000);c>0;c--){setStatus(`Back-translating… ${i}/${subs.length} — next in ${c}s…`);await sleep(1000);}}
+    const batch=subs.slice(i,i+BATCH);
+    const prompt=[`You are a professional subtitle translator. Translate each subtitle from ${lang} back to ${srcLang}.`,
+      `Rules:`,`- Translate literally — this is for quality checking`,`- Keep line breaks using \\n`,
+      `- Return ONLY a JSON array of strings, in order`,`- No explanations, no markdown`,``,
+      `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))].join('\n');
+    try{
+      const raw=await callProvider(prompt,key);
+      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
+      batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
+      setStatus(`Back-translating… ${Math.min(i+BATCH,subs.length)}/${subs.length}`);
+    }catch(e){setStatus('Error: '+e.message,'err');btn.disabled=false;updateBtBtn();return;}
+    fill.style.width=Math.round((i+batch.length)/subs.length*100)+'%';
   }
-
-  backTranslations[lang] = result;
-  fill.style.width = '100%';
-  setStatus('Back-translation done — differences highlighted in cards', 'ok');
-  btn.disabled = false;
-  renderCurrentView();
+  backTranslations[lang]=result; fill.style.width='100%';
+  setStatus('Back-translation done — differences highlighted in cards','ok');
+  btn.disabled=false; renderCurrentView();
 }
 
-// Export
+// ══════════════════════════════════════════════════════════════
+//  EXPORT — ACTIVE TAB  (includes source / convert)
+// ══════════════════════════════════════════════════════════════
 function exportFile() {
-  if (activeTab==='source'||!translations[activeTab]) return;
-  const fmt = $('exportFormat').value;
-  const subs = getFinalSubs(activeTab);
-  let content = '';
-  if (fmt==='srt') content = subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';
-  else if (fmt==='csv') content='start,end,text\n'+subs.map(s=>`${s.start},${s.end},"${s.text.replace(/"/g,'""')}"`).join('\n');
-  else content=subs.map(s=>s.text).join('\n');
-  const slug=activeTab.toLowerCase().replace(/[^a-z]/g,'_');
-  const blob=new Blob([content],{type:'text/plain;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${slug}.${fmt}`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  let subs,slug;
+  if(activeTab==='source'){subs=subtitles;slug='source';}
+  else{if(!translations[activeTab])return;subs=getFinalSubs(activeTab);slug=activeTab.toLowerCase().replace(/[^a-z0-9]/g,'_');}
+  const fmt=$('exportFormat').value;
+
+  if(fmt==='xlsx'){
+    const rows=[['Start Time','End Time','Text'],...subs.map(s=>[s.start,s.end,s.text])];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Subtitles');
+    XLSX.writeFile(wb,slug+'.xlsx');
+    setStatus('Exported ✓','ok'); return;
+  }
+  let content='';
+  if(fmt==='srt')      content=subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';
+  else if(fmt==='csv') content='Start Time,End Time,Text\n'+subs.map(s=>`${s.start},${s.end},"${s.text.replace(/"/g,'""')}"`).join('\n');
+  else                 content=subs.map(s=>s.text).join('\n');
+  dlText(content,slug+'.'+fmt);
   setStatus('Exported ✓','ok');
 }
 
-// Clear all
+// ══════════════════════════════════════════════════════════════
+//  EXPORT ALL LANGUAGES  (multi-language CSV / XLSX)
+// ══════════════════════════════════════════════════════════════
+function exportAllTranslations() {
+  const langs=Object.keys(translations);
+  if(!langs.length){setStatus('No translations to export','err');return;}
+  const fmt=$('exportAllFormat').value;
+  const header=['Start Time','End Time',...langs];
+  const rows=subtitles.map(src=>{
+    const row=[src.start,src.end];
+    langs.forEach(lang=>{
+      const f=getFinalSubs(lang).find(s=>s.index===src.index);
+      row.push(f?f.text:'');
+    });
+    return row;
+  });
+  const allRows=[header,...rows];
+  if(fmt==='xlsx'){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(allRows),'Translations');
+    XLSX.writeFile(wb,'all_translations.xlsx');
+  } else {
+    dlText(allRows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'all_translations.csv');
+  }
+  setStatus(`Exported ${langs.length} language${langs.length>1?'s':''} ✓`,'ok');
+}
+
+function dlText(content,filename) {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
+  a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLEAR ALL
+// ══════════════════════════════════════════════════════════════
 function clearAll() {
-  subtitles = [];
-  translations = {};
-  backTranslations = {};
-  activeTab = 'source';
-  $('pasteArea').value = '';
-  $('fileInput').value = '';
-  $('translateBtn').disabled = true;
-  $('exportBtn').disabled = true;
-  $('clearBtn').disabled = true;
-  $('progressFill').style.width = '0%';
-  setStatus('');
-  rebuildTabs();
-  renderCurrentView();
+  subtitles=[]; translations={}; backTranslations={}; activeTab='source';
+  $('pasteArea').value=''; $('fileInput').value='';
+  $('translateBtn').disabled=true; $('exportBtn').disabled=true; $('clearBtn').disabled=true;
+  $('progressFill').style.width='0%'; updateExportAllBtn(); setStatus('');
+  rebuildTabs(); renderCurrentView();
 }
 
-
-// ══════════════════════════════════════════════
-//  Import tab switcher
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  IMPORT TAB SWITCHER
+// ══════════════════════════════════════════════════════════════
 function switchImportTab(tab) {
-  $('sw-import').className    = 'tab-sw-btn' + (tab === 'import'     ? ' active' : '');
-  $('sw-transcribe').className = 'tab-sw-btn' + (tab === 'transcribe' ? ' active' : '');
-  $('panel-import').style.display     = tab === 'import'     ? '' : 'none';
-  $('panel-transcribe').style.display = tab === 'transcribe' ? '' : 'none';
+  $('sw-import').className    ='tab-sw-btn'+(tab==='import'    ?' active':'');
+  $('sw-transcribe').className='tab-sw-btn'+(tab==='transcribe'?' active':'');
+  $('panel-import').style.display    =tab==='import'    ?'':'none';
+  $('panel-transcribe').style.display=tab==='transcribe'?'':'none';
 }
 
-// ══════════════════════════════════════════════
-//  Transcription state & helpers
-// ══════════════════════════════════════════════
-let xcProvider = 'groq';
-let xcFile = null;
-
-const XC_PROVIDERS = {
-  groq:   { label: 'Groq key', placeholder: 'gsk_...', hint: 'Same key as translation if using Groq', validate: v => v.startsWith('gsk_') && v.length > 20 },
-  openai: { label: 'OpenAI key', placeholder: 'sk-...', hint: 'Get key: platform.openai.com — $0.006/min', validate: v => (v.startsWith('sk-') || v.startsWith('sk-proj-')) && v.length > 20 },
-};
-
-function setXcProvider(id) {
-  xcProvider = id;
-  $('xc-pvdr-groq').className  = 'pvdr-btn' + (id === 'groq'   ? ' active' : '');
-  $('xc-pvdr-openai').className = 'pvdr-btn' + (id === 'openai' ? ' active' : '');
-  const cfg = XC_PROVIDERS[id];
-  $('xcKeyLabel').textContent   = cfg.label;
-  $('xcApiKey').placeholder     = cfg.placeholder;
-  $('xcKeyHint').textContent    = cfg.hint;
-  $('xcApiKey').value = '';
-  $('xcDot').className = 'xc-dot';
-  updateXcBtn();
-}
-
-$('xcApiKey').addEventListener('input', () => {
-  const v = $('xcApiKey').value.trim();
-  const ok = XC_PROVIDERS[xcProvider]?.validate(v) ?? (v.length > 20);
-  $('xcDot').className = 'xc-dot' + (ok ? ' ok' : '');
-  updateXcBtn();
-});
-
-function updateXcBtn() {
-  const hasKey  = XC_PROVIDERS[xcProvider]?.validate($('xcApiKey').value.trim()) ?? false;
-  const hasFile = !!xcFile;
-  $('xcBtn').disabled = !(hasKey && hasFile);
-}
-
-function setXcStatus(msg, type) {
-  $('xcStatus').textContent  = msg;
-  $('xcStatus').className    = 'xc-status' + (type ? ' ' + type : '');
-}
-
-// ── Drop zone for audio/video ──
-const xcDrop = $('xcDrop');
-xcDrop.addEventListener('click',    () => $('xcFileInput').click());
-xcDrop.addEventListener('dragover', e  => { e.preventDefault(); xcDrop.classList.add('drag'); });
-xcDrop.addEventListener('dragleave',()  => xcDrop.classList.remove('drag'));
-xcDrop.addEventListener('drop', e => {
-  e.preventDefault(); xcDrop.classList.remove('drag');
-  const f = e.dataTransfer.files[0];
-  if (f) setXcFile(f);
-});
-$('xcFileInput').addEventListener('change', e => {
-  if (e.target.files[0]) setXcFile(e.target.files[0]);
-  e.target.value = '';
-});
+// ══════════════════════════════════════════════════════════════
+//  TRANSCRIPTION — ELEVENLABS SCRIBE
+// ══════════════════════════════════════════════════════════════
+const xcDrop=$('xcDrop');
+xcDrop.addEventListener('click',   ()=>$('xcFileInput').click());
+xcDrop.addEventListener('dragover',e=>{e.preventDefault();xcDrop.classList.add('drag');});
+xcDrop.addEventListener('dragleave',()=>xcDrop.classList.remove('drag'));
+xcDrop.addEventListener('drop',e=>{e.preventDefault();xcDrop.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setXcFile(f);});
+$('xcFileInput').addEventListener('change',e=>{if(e.target.files[0])setXcFile(e.target.files[0]);e.target.value='';});
 
 function setXcFile(f) {
-  xcFile = f;
-  const mb = (f.size / 1024 / 1024).toFixed(1);
-  const info = $('xcFileInfo');
-  info.style.display = '';
-  info.innerHTML =
-    '<div class="xc-file-row">' +
-      '<span class="xc-file-name">' + escHtml(f.name) + '</span>' +
-      '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + mb + ' MB</span>' +
-      '<span class="xc-file-rm" onclick="clearXcFile()" title="Remove">×</span>' +
-    '</div>';
-  xcDrop.style.display = 'none';
-  if (f.size > 25 * 1024 * 1024) {
-    setXcStatus('Warning: file exceeds 25MB — Groq may reject it. Try OpenAI or trim the file.');
-  } else {
-    setXcStatus('');
-  }
-  $('xcProgressFill').style.width = '0%';
-  updateXcBtn();
+  xcFile=f; const mb=(f.size/1024/1024).toFixed(1); const info=$('xcFileInfo');
+  info.style.display='';
+  info.innerHTML='<div class="xc-file-row"><span class="xc-file-name">'+escHtml(f.name)+'</span>'+
+    '<span style="font-size:10px;color:var(--text3);flex-shrink:0">'+mb+' MB</span>'+
+    '<span class="xc-file-rm" onclick="clearXcFile()" title="Remove">×</span></div>';
+  xcDrop.style.display='none';
+  setXcStatus(f.size>500*1024*1024?'Large file — extraction may take a while':'');
+  $('xcProgressFill').style.width='0%'; $('xcBtn').disabled=false;
 }
-
 function clearXcFile() {
-  xcFile = null;
-  $('xcFileInfo').style.display = 'none';
-  xcDrop.style.display = '';
-  setXcStatus('');
-  $('xcProgressFill').style.width = '0%';
-  updateXcBtn();
+  xcFile=null; $('xcFileInfo').style.display='none'; xcDrop.style.display='';
+  setXcStatus(''); $('xcProgressFill').style.width='0%'; $('xcBtn').disabled=true;
+}
+function setXcStatus(msg,type) {
+  $('xcStatus').textContent=msg; $('xcStatus').className='xc-status'+(type?' '+type:'');
 }
 
-// ══════════════════════════════════════════════
-//  Transcription engine
-// ══════════════════════════════════════════════
 async function startTranscription() {
-  if (!xcFile) return;
-  const key = $('xcApiKey').value.trim();
-  if (!key) { setXcStatus('Enter a Whisper API key', 'err'); return; }
-
-  const btn = $('xcBtn');
-  btn.disabled = true;
-  $('xcProgressFill').style.width = '30%';
-  setXcStatus('Preparing audio…');
-
+  if(!xcFile) return;
+  const elKey=settings.elKeyOverride||ELEVENLABS_KEY_DEFAULT;
+  const btn=$('xcBtn'); btn.disabled=true;
+  $('xcProgressFill').style.width='20%'; setXcStatus('Preparing audio…');
   try {
-    // For video files, extract audio blob via MediaRecorder + OfflineAudioContext
-    let audioBlob = xcFile;
-    const isVideo = xcFile.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)$/i.test(xcFile.name);
+    let audioBlob=xcFile;
+    const isVideo=xcFile.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(xcFile.name);
+    if(isVideo){setXcStatus('Extracting audio from video…');audioBlob=await extractAudioFromVideo(xcFile);$('xcProgressFill').style.width='45%';}
 
-    if (isVideo) {
-      setXcStatus('Extracting audio from video…');
-      audioBlob = await extractAudioFromVideo(xcFile);
-      $('xcProgressFill').style.width = '50%';
-    }
+    setXcStatus('Sending to ElevenLabs Scribe…'); $('xcProgressFill').style.width='60%';
+    const lang=$('xcSourceLang').value;
+    const fd=new FormData();
+    fd.append('audio',audioBlob,xcFile.name.replace(/\.[^.]+$/,'.mp3'));
+    fd.append('model_id',settings.elModel||'scribe_v1');
+    fd.append('timestamps_granularity','word');
+    fd.append('tag_audio_events','false');
+    if(lang!=='auto') fd.append('language_code',lang);
 
-    setXcStatus('Sending to Whisper…');
-    $('xcProgressFill').style.width = '65%';
+    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':elKey},body:fd});
+    $('xcProgressFill').style.width='85%';
+    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
+    const data=await resp.json(); $('xcProgressFill').style.width='100%';
 
-    const formData = new FormData();
-    formData.append('file', audioBlob, xcFile.name.replace(/\.[^.]+$/, '.mp3'));
-    formData.append('model', xcProvider === 'groq' ? 'whisper-large-v3' : 'whisper-1');
-    formData.append('response_format', 'verbose_json');
-    formData.append('timestamp_granularities[]', 'segment');
+    let subs;
+    if(data.words&&data.words.length) subs=wordsToSubs(data.words);
+    else if(data.text) subs=[{index:1,start:'00:00:00,000',end:'00:00:05,000',text:data.text.trim()}];
+    else throw new Error('No transcription data returned');
+    if(!subs.length) throw new Error('Could not extract segments');
 
-    const lang = $('xcSourceLang').value;
-    if (lang !== 'auto') formData.append('language', lang);
-
-    const endpoint = xcProvider === 'groq'
-      ? 'https://api.groq.com/openai/v1/audio/transcriptions'
-      : 'https://api.openai.com/v1/audio/transcriptions';
-
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + key },
-      body: formData
-    });
-
-    $('xcProgressFill').style.width = '85%';
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err?.error?.message || 'HTTP ' + resp.status);
-    }
-
-    const data = await resp.json();
-    $('xcProgressFill').style.width = '100%';
-
-    // Convert Whisper segments → subtitle objects
-    const segments = data.segments || [];
-    if (!segments.length) throw new Error('No segments returned — file may be silent or unsupported');
-
-    const subs = segments.map((seg, i) => ({
-      index:  i + 1,
-      start:  secToSrt(seg.start),
-      end:    secToSrt(seg.end),
-      text:   seg.text.trim()
-    }));
-
-    // Load into main app
-    subtitles        = subs;
-    translations     = {};
-    backTranslations = {};
-    activeTab        = 'source';
-    $('translateBtn').disabled = false;
-    $('clearBtn').disabled     = false;
-    $('exportBtn').disabled    = true;
-    rebuildTabs();
-    renderCurrentView();
-    setXcStatus(subs.length + ' subtitles transcribed ✓', 'ok');
-    // Switch to import tab to show the result
+    subtitles=subs; translations={}; backTranslations={}; activeTab='source';
+    $('translateBtn').disabled=false; $('clearBtn').disabled=false; $('exportBtn').disabled=false;
+    updateExportAllBtn(); rebuildTabs(); renderCurrentView();
+    setXcStatus(subs.length+' subtitles transcribed ✓','ok');
     switchImportTab('import');
+  } catch(e) { setXcStatus('Error: '+e.message,'err'); $('xcProgressFill').style.width='0%'; }
+  btn.disabled=!xcFile;
+}
 
-  } catch(e) {
-    setXcStatus('Error: ' + e.message, 'err');
-    $('xcProgressFill').style.width = '0%';
+// ── Group ElevenLabs word tokens → subtitle segments ─────────
+function wordsToSubs(words) {
+  const MAX_DUR=5.5, MAX_CHARS=120, MIN_GAP=0.45;
+  const subs=[]; let group=[],gStart=null;
+
+  function flush(endTime) {
+    if(!group.length) return;
+    const text=group.map(w=>w.text).join(' ').replace(/\s+([,.])/g,'$1').trim();
+    if(text) subs.push({index:subs.length+1,start:secToSrt(gStart),end:secToSrt(endTime),text});
+    group=[]; gStart=null;
   }
 
-  btn.disabled = false;
-  updateXcBtn();
+  words.forEach((w,i)=>{
+    if(w.type&&w.type!=='word') return;
+    if(!w.text||!w.text.trim()) return;
+    const next=words.slice(i+1).find(x=>!x.type||x.type==='word');
+    if(gStart===null) gStart=w.start??0;
+    group.push(w);
+    const curText=group.map(g=>g.text).join(' ');
+    const duration=(w.end??w.start??0)-gStart;
+    const gap=next?((next.start??0)-(w.end??0)):Infinity;
+    const sentEnd=/[.!?。！？]$/.test(w.text);
+    if(sentEnd||duration>=MAX_DUR||curText.length>=MAX_CHARS||gap>=MIN_GAP) flush(w.end??gStart+1);
+  });
+  if(group.length) flush(group[group.length-1].end??gStart+1);
+  return subs;
 }
 
-// ── Extract audio from video using Web Audio API ──
+// ── Audio extraction from video ──────────────────────────────
 async function extractAudioFromVideo(videoFile) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(videoFile);
-    const audio = new Audio();
-    audio.src = url;
-    audio.addEventListener('loadedmetadata', async () => {
+  return new Promise(resolve=>{
+    const url=URL.createObjectURL(videoFile), audio=new Audio(); audio.src=url;
+    audio.addEventListener('loadedmetadata',async()=>{
       try {
-        const duration = audio.duration;
-        const sampleRate = 16000; // Whisper works well at 16kHz
-        const ctx = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
-        const src = ctx.createBufferSource();
-
-        // Decode via AudioContext first
-        const arrayBuf = await videoFile.arrayBuffer();
-        const decoded  = await ctx.decodeAudioData(arrayBuf).catch(() => null);
-
-        if (!decoded) {
-          // Fallback: send original file directly
-          URL.revokeObjectURL(url);
-          resolve(videoFile);
-          return;
-        }
-
-        src.buffer = decoded;
-        src.connect(ctx.destination);
-        src.start(0);
-        const rendered = await ctx.startRendering();
-
-        // Encode to WAV
-        const wav = audioBufferToWav(rendered);
+        const dur=audio.duration, sr=16000;
+        const ctx=new OfflineAudioContext(1,Math.ceil(dur*sr),sr);
+        const src=ctx.createBufferSource();
+        const ab=await videoFile.arrayBuffer();
+        const decoded=await ctx.decodeAudioData(ab).catch(()=>null);
+        if(!decoded){URL.revokeObjectURL(url);resolve(videoFile);return;}
+        src.buffer=decoded; src.connect(ctx.destination); src.start(0);
+        const rendered=await ctx.startRendering();
         URL.revokeObjectURL(url);
-        resolve(new Blob([wav], { type: 'audio/wav' }));
-      } catch(e) {
-        URL.revokeObjectURL(url);
-        // Fallback: try sending the original
-        resolve(videoFile);
-      }
+        resolve(new Blob([audioBufferToWav(rendered)],{type:'audio/wav'}));
+      } catch{URL.revokeObjectURL(url);resolve(videoFile);}
     });
-    audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(videoFile); });
+    audio.addEventListener('error',()=>{URL.revokeObjectURL(url);resolve(videoFile);});
   });
 }
 
-// ── Minimal WAV encoder ──
 function audioBufferToWav(buffer) {
-  const numChannels = 1;
-  const sampleRate  = buffer.sampleRate;
-  const samples     = buffer.getChannelData(0);
-  const dataLength  = samples.length * 2;
-  const wavBuffer   = new ArrayBuffer(44 + dataLength);
-  const view        = new DataView(wavBuffer);
-
-  function ws(off, str) { for (let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); }
-  function wu32(off, v) { view.setUint32(off, v, true); }
-  function wu16(off, v) { view.setUint16(off, v, true); }
-
-  ws(0,'RIFF'); wu32(4, 36+dataLength); ws(8,'WAVE');
-  ws(12,'fmt '); wu32(16,16); wu16(20,1); wu16(22,numChannels);
-  wu32(24,sampleRate); wu32(28,sampleRate*numChannels*2); wu16(32,numChannels*2); wu16(34,16);
-  ws(36,'data'); wu32(40,dataLength);
-
-  let off = 44;
-  for (let i=0; i<samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
-    off += 2;
-  }
-  return wavBuffer;
+  const sr=buffer.sampleRate, samples=buffer.getChannelData(0), dataLen=samples.length*2;
+  const wb=new ArrayBuffer(44+dataLen), v=new DataView(wb);
+  const ws=(off,str)=>{for(let i=0;i<str.length;i++)v.setUint8(off+i,str.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,36+dataLen,true);ws(8,'WAVE');
+  ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,'data');v.setUint32(40,dataLen,true);
+  let off=44; for(let i=0;i<samples.length;i++){const s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;}
+  return wb;
 }
 
-// ── Seconds → SRT timecode ──
 function secToSrt(sec) {
-  const h  = Math.floor(sec / 3600);
-  const m  = Math.floor((sec % 3600) / 60);
-  const s  = Math.floor(sec % 60);
-  const ms = Math.round((sec % 1) * 1000);
+  sec=sec||0; const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.round((sec%1)*1000);
   return pad(h)+':'+pad(m)+':'+pad(s)+','+String(ms).padStart(3,'0');
 }
 
-// Init
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
 rebuildTabs();
 renderCurrentView();
 </script>
