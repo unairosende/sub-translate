@@ -284,11 +284,6 @@ input[type=file]{display:none}
 
       <div class="sg-sep"></div>
       <div class="sg-title">Transcription — ElevenLabs</div>
-      <div class="sg-note">The API key is embedded. Override below only if you need a different key.</div>
-      <div class="sg-row">
-        <span class="sg-label">API Key override</span>
-        <input class="sg-input wide" type="password" id="s-elKey" placeholder="Leave blank → embedded key" autocomplete="off">
-      </div>
       <div class="sg-row">
         <span class="sg-label">Model</span>
         <select class="sg-select" id="s-elModel">
@@ -299,11 +294,6 @@ input[type=file]{display:none}
 
       <div class="sg-sep"></div>
       <div class="sg-title">Translation</div>
-      <div class="sg-note">Gemini is the default provider. The API key is embedded. Override below only if needed.</div>
-      <div class="sg-row">
-        <span class="sg-label">API Key override</span>
-        <input class="sg-input wide" type="password" id="s-transKey" placeholder="Leave blank → embedded key" autocomplete="off">
-      </div>
       <div class="sg-row">
         <span class="sg-label">Provider</span>
         <select class="sg-select" id="s-transProvider" onchange="onSettingsProviderChange()">
@@ -662,18 +652,13 @@ function signOut() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  EMBEDDED API KEY & SETTINGS
+//  SETTINGS
 // ══════════════════════════════════════════════════════════════
-const ELEVENLABS_KEY_DEFAULT = 'b6d439c1cf0d397826e00f772337d906df26700cca7f47b42c618767331c124b';
-const GEMINI_KEY_DEFAULT     = 'AIzaSyA2w-1_TO7HQzW9ZaNaS7WT3vqTPZl6OB4';
-
 let settings = {
   maxCharsH:          42,
   maxCharsV:          32,
   maxLinesPerSub:      2,
-  elKeyOverride:      '',
   elModel:            'scribe_v1',
-  translationKeyOverride: '',
   translationProvider:    'gemini',
   translationModel:       'gemini-2.5-flash-lite',
 };
@@ -698,9 +683,7 @@ function openSettings() {
   $('s-maxH').value         = settings.maxCharsH;
   $('s-maxV').value         = settings.maxCharsV;
   $('s-maxLines').value      = settings.maxLinesPerSub;
-  $('s-elKey').value         = settings.elKeyOverride;
   $('s-elModel').value       = settings.elModel;
-  $('s-transKey').value      = settings.translationKeyOverride;
   $('s-transProvider').value = settings.translationProvider;
   populateSettingsModelSelect(settings.translationProvider);
   $('s-transModel').value    = settings.translationModel;
@@ -710,15 +693,13 @@ function closeSettings() {
   $('settingsModal').style.display = 'none';
 }
 function saveSettings() {
-  settings.maxCharsH              = Math.max(10, parseInt($('s-maxH').value)     || 42);
-  settings.maxCharsV              = Math.max(10, parseInt($('s-maxV').value)     || 32);
-  settings.maxLinesPerSub         = Math.max(1,  parseInt($('s-maxLines').value) || 2);
-  settings.elKeyOverride          = $('s-elKey').value.trim();
-  settings.elModel                = $('s-elModel').value;
-  settings.translationKeyOverride = $('s-transKey').value.trim();
-  settings.translationProvider    = $('s-transProvider').value;
-  settings.translationModel       = $('s-transModel').value;
-  activeProvider                  = settings.translationProvider;
+  settings.maxCharsH       = Math.max(10, parseInt($('s-maxH').value)     || 42);
+  settings.maxCharsV       = Math.max(10, parseInt($('s-maxV').value)     || 32);
+  settings.maxLinesPerSub  = Math.max(1,  parseInt($('s-maxLines').value) || 2);
+  settings.elModel         = $('s-elModel').value;
+  settings.translationProvider = $('s-transProvider').value;
+  settings.translationModel    = $('s-transModel').value;
+  activeProvider           = settings.translationProvider;
   updateProviderTiming();
   closeSettings();
   updateLimitBox();
@@ -732,9 +713,6 @@ function populateSettingsModelSelect(provider) {
   (PROVIDERS[provider]?.models || PROVIDERS.gemini.models).forEach(m => {
     const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; sel.appendChild(o);
   });
-}
-function getTranslationKey() {
-  return settings.translationKeyOverride || GEMINI_KEY_DEFAULT;
 }
 function updateLimitBox() {
   $('limitBox').innerHTML =
@@ -1252,28 +1230,16 @@ function midTimecode(a,b){return msToTc(Math.round((tcToMs(a)+tcToMs(b))/2));}
 // ══════════════════════════════════════════════════════════════
 //  UNIFIED PROVIDER CALL  (translation)
 // ══════════════════════════════════════════════════════════════
-async function callProvider(prompt,key,retries=3) {
+async function callProvider(prompt,_key,retries=3) {
   const model = settings.translationModel || PROVIDERS[activeProvider]?.models[0]?.id;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   for(let attempt=0;attempt<retries;attempt++){
     try{
-      let rawText;
-      if(activeProvider==='gemini'){
-        const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-          {method:'POST',headers:{'Content-Type':'application/json'},
-           body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:4096}})});
-        const data=await resp.json();
-        if(data.error){const e=new Error(data.error.message);e.is429=data.error.code===429||(data.error.message||'').includes('quota');throw e;}
-        rawText=data?.candidates?.[0]?.content?.parts?.[0]?.text||'[]';
-      } else {
-        const urls={groq:'https://api.groq.com/openai/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',mistral:'https://api.mistral.ai/v1/chat/completions'};
-        const resp=await fetch(urls[activeProvider],{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-          body:JSON.stringify({model,temperature:0.3,max_tokens:4096,messages:[{role:'user',content:prompt}]})});
-        const data=await resp.json();
-        if(!resp.ok||data.error){const e=new Error(data?.error?.message||'HTTP '+resp.status);e.is429=resp.status===429;throw e;}
-        rawText=data?.choices?.[0]?.message?.content||'[]';
-      }
-      return rawText;
+      const resp=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt,model,provider:activeProvider})});
+      const data=await resp.json();
+      if(data.error){const e=new Error(data.error);e.is429=data.is429||resp.status===429;throw e;}
+      return data.text||'[]';
     } catch(e){
       if(e.is429&&attempt<retries-1){
         const w=30000*(attempt+1);
@@ -1289,8 +1255,6 @@ async function callProvider(prompt,key,retries=3) {
 //  TRANSLATION
 // ══════════════════════════════════════════════════════════════
 async function startTranslation() {
-  const key = getTranslationKey();
-  if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   if(!subtitles.length){setStatus('Import subtitles first','err');return;}
   const lang=getTargetLang(); if(!lang){setStatus('Enter a target language','err');return;}
   const srcLang=$('srcLangSelect').value;
@@ -1313,7 +1277,7 @@ async function startTranslation() {
       `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))
     ].join('\n');
     try{
-      const raw=await callProvider(prompt,key);
+      const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
       setStatus(`Translating… ${Math.min(i+BATCH,snap.length)}/${snap.length}`);
@@ -1357,7 +1321,6 @@ async function fixOverlength() {
     toFix.forEach(s=>{const f=subs.find(x=>x.index===s.index);if(!f)return;const r=reflowText(f.text,limit);if(r!==f.text){f.text=r;fixed++;}});
     setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok'); renderCurrentView(); return;
   }
-  const key = getTranslationKey(); if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   fixBtn.disabled=true; fixBtn.innerHTML='<span class="suggest-spinner"></span> Fixing…';
   setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
   const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const BATCH=15; let fixed=0;
@@ -1367,7 +1330,7 @@ async function fixOverlength() {
     const srcTexts=batch.map(s=>subtitles.find(o=>o.index===s.index)?.text||'');
     const prompt=`You are a professional subtitle editor. Each subtitle in ${lang} is too long (max ${limit} chars/line, max ${settings.maxLinesPerSub} lines). Rephrase slightly to fit — keep exact meaning. Split with \\n. Return ONLY a JSON array.\n\nSource:\n${JSON.stringify(srcTexts)}\n\nTranslations:\n${JSON.stringify(batch.map(s=>s.text))}`;
     try{
-      const raw=await callProvider(prompt,key,3);
+      const raw=await callProvider(prompt,null,3);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g,'').trim());}catch{parsed=null;}
       if(Array.isArray(parsed)) batch.forEach((s,j)=>{if(parsed[j]!==undefined){const f=subs.find(x=>x.index===s.index);if(f){f.text=parsed[j];fixed++;}}});
     }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';return;}
@@ -1408,7 +1371,6 @@ function wordDiff(source,backTrans) {
 async function startBackTranslation() {
   const lang=activeTab; if(!translations[lang]) return;
   if(backTranslations[lang]){delete backTranslations[lang];renderCurrentView();return;}
-  const key = getTranslationKey(); if(!key){setStatus('No translation API key set — add one in Settings ⚙','err');return;}
   const srcLangVal=$('srcLangSelect').value;
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
@@ -1424,7 +1386,7 @@ async function startBackTranslation() {
       `- Return ONLY a JSON array of strings, in order`,`- No explanations, no markdown`,``,
       `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))].join('\n');
     try{
-      const raw=await callProvider(prompt,key);
+      const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
       setStatus(`Back-translating… ${Math.min(i+BATCH,subs.length)}/${subs.length}`);
@@ -1544,7 +1506,6 @@ function setXcStatus(msg,type) {
 
 async function startTranscription() {
   if(!xcFile) return;
-  const elKey=settings.elKeyOverride||ELEVENLABS_KEY_DEFAULT;
   const btn=$('xcBtn'); btn.disabled=true;
   $('xcProgressFill').style.width='20%'; setXcStatus('Preparing audio…');
   try {
@@ -1561,7 +1522,7 @@ async function startTranscription() {
     fd.append('tag_audio_events','false');
     if(lang!=='auto') fd.append('language_code',lang);
 
-    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':elKey},body:fd});
+    const resp=await fetch('/api/transcribe',{method:'POST',body:fd});
     $('xcProgressFill').style.width='85%';
     if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
     const data=await resp.json(); $('xcProgressFill').style.width='100%';
