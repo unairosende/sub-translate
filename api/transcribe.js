@@ -3,7 +3,7 @@ export const config = { api: { bodyParser: false, sizeLimit: '25mb' } };
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const elKey = process.env.ELEVENLABS_API_KEY;
+  const elKey = process.env.Elevenlabs_key;
   if (!elKey) return res.status(500).json({ error: 'ElevenLabs key not configured' });
 
   try {

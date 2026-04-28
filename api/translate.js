@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   const { prompt, model = 'gemini-2.5-flash-lite', provider = 'gemini' } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const geminiKey = process.env.gemini_key;
   const groqKey   = process.env.GROQ_API_KEY;
   const orKey     = process.env.OPENROUTER_API_KEY;
   const mistralKey= process.env.MISTRAL_API_KEY;
