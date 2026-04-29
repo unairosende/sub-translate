@@ -324,6 +324,7 @@ input[type=file]{display:none}
 .export-popup-wrap{position:relative}
 .export-popup{position:absolute;top:calc(100% + 6px);right:0;width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(22,20,15,.12);z-index:500;display:none}
 .export-popup.open{display:block}
+.export-popup.up{top:auto;bottom:calc(100% + 6px);right:0}
 .exp-sec{padding:10px 12px 12px}
 .exp-sec+.exp-sec{border-top:1px solid var(--line)}
 .exp-sec-label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
@@ -529,6 +530,7 @@ input[type=file]{display:none}
     <div class="tab-switcher">
       <button class="tab-sw-btn active" id="sw-import"     onclick="switchImportTab('import')">Import</button>
       <button class="tab-sw-btn"        id="sw-transcribe" onclick="switchImportTab('transcribe')">Transcribe</button>
+      <button class="tab-sw-btn"        id="sw-align"      onclick="switchImportTab('align')">Align</button>
     </div>
 
     <!-- Import panel -->
@@ -595,6 +597,28 @@ input[type=file]{display:none}
       </button>
       <div style="margin-top:7px">
         <span class="el-badge"><span class="el-badge-dot"></span>ElevenLabs Scribe</span>
+      </div>
+    </div>
+
+    <!-- Align panel -->
+    <div id="panel-align" style="display:none">
+      <div class="s-title">Transcript text</div>
+      <textarea class="paste-area" id="alignText" placeholder="Paste the clean transcript here. The audio timecodes will be mapped to this text." rows="5" style="margin-bottom:8px"></textarea>
+      <div class="s-title">Audio / video file</div>
+      <input type="file" id="alignAudioInput" accept="audio/*,video/*,.mp3,.mp4,.wav,.m4a,.mov,.mkv,.aac,.ogg,.flac,.webm">
+      <div class="xc-drop" id="alignDrop">
+        <div class="xc-drop-icon">🔊</div>
+        <div class="xc-drop-title">Drop audio or video</div>
+        <div class="xc-drop-sub">MP3 · MP4 · WAV · M4A · MOV</div>
+      </div>
+      <div id="alignFileInfo" style="display:none"></div>
+      <div class="xc-status" id="alignStatus" style="margin-top:4px"></div>
+      <button class="btn btn-accent" id="alignBtn" onclick="startAlignment()" style="margin-top:8px;width:100%" disabled>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h8M2 12h5"/><circle cx="13" cy="10" r="2.5"/><path d="M13 7.5V10M13 10l1.5 1.5"/></svg>
+        Align subtitles
+      </button>
+      <div style="margin-top:7px">
+        <span class="el-badge"><span class="el-badge-dot"></span>ElevenLabs Scribe · word timestamps</span>
       </div>
     </div>
   </div>
@@ -677,6 +701,45 @@ input[type=file]{display:none}
   <!-- hidden: allowRephrase kept in DOM for JS compatibility but always true -->
   <input type="checkbox" id="allowRephrase" checked style="display:none">
 
+  <!-- ── Actions ── -->
+  <div class="s-sec" style="margin-top:auto;display:flex;flex-direction:column;gap:7px">
+    <button class="btn btn-accent" id="translateBtn" onclick="startTranslation()" disabled style="width:100%;justify-content:center">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
+      Translate
+    </button>
+    <div class="export-popup-wrap" id="exportPopupWrap" style="width:100%">
+      <button class="btn" id="exportBtn" onclick="toggleExportPopup(event)" disabled style="width:100%;justify-content:center">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
+        Export
+        <svg width="10" height="10" viewBox="0 0 10 6" fill="currentColor" style="opacity:.5;margin-left:auto"><path d="M0 0l5 6 5-6z"/></svg>
+      </button>
+      <div class="export-popup up" id="exportPopup">
+        <div class="exp-sec">
+          <div class="exp-sec-label">Active tab</div>
+          <div class="exp-row">
+            <select class="exp-sel" id="exportFormat">
+              <option value="srt">SRT</option>
+              <option value="txt">TXT</option>
+              <option value="csv">CSV</option>
+              <option value="xlsx">XLSX</option>
+            </select>
+            <button class="exp-btn accent" onclick="exportFile();closeExportPopup()">Download</button>
+          </div>
+        </div>
+        <div class="exp-sec">
+          <div class="exp-sec-label">All languages</div>
+          <div class="exp-row">
+            <select class="exp-sel" id="exportAllFormat">
+              <option value="csv">CSV</option>
+              <option value="xlsx">XLSX</option>
+            </select>
+            <button class="exp-btn" id="exportAllBtn" onclick="exportAllTranslations();closeExportPopup()" disabled>Download</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /source-panel -->
 
 <!-- ══════════════════════════════════════════════
@@ -703,44 +766,6 @@ input[type=file]{display:none}
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;color:var(--ink-3)"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg>
       <span class="header-search-ph">Search ⌘K</span>
       <span class="kbd">⌘K</span>
-    </div>
-    <div class="header-actions">
-      <!-- Export popup -->
-      <div class="export-popup-wrap" id="exportPopupWrap">
-        <button class="btn" id="exportBtn" onclick="toggleExportPopup(event)" disabled>
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v9M3 10l5 5 5-5M1 14h14"/></svg>
-          Export
-          <svg width="10" height="10" viewBox="0 0 10 6" fill="currentColor" style="opacity:.5"><path d="M0 0l5 6 5-6z"/></svg>
-        </button>
-        <div class="export-popup" id="exportPopup">
-          <div class="exp-sec">
-            <div class="exp-sec-label">Active tab</div>
-            <div class="exp-row">
-              <select class="exp-sel" id="exportFormat">
-                <option value="srt">SRT</option>
-                <option value="txt">TXT</option>
-                <option value="csv">CSV</option>
-                <option value="xlsx">XLSX</option>
-              </select>
-              <button class="exp-btn accent" onclick="exportFile();closeExportPopup()">Download</button>
-            </div>
-          </div>
-          <div class="exp-sec">
-            <div class="exp-sec-label">All languages</div>
-            <div class="exp-row">
-              <select class="exp-sel" id="exportAllFormat">
-                <option value="csv">CSV</option>
-                <option value="xlsx">XLSX</option>
-              </select>
-              <button class="exp-btn" id="exportAllBtn" onclick="exportAllTranslations();closeExportPopup()" disabled>Download</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-accent" id="translateBtn" onclick="startTranslation()" disabled>
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/><path d="M11 5l3 7M13 5l-2 7"/></svg>
-        Translate
-      </button>
     </div>
   </div>
 
@@ -919,6 +944,7 @@ let currentEditCard  = null;
 let activeProvider   = 'gemini';
 let xcFile           = null;
 let undoStack        = [];
+let alignAudioFile   = null;
 
 const $ = id => document.getElementById(id);
 
@@ -1786,10 +1812,10 @@ function clearAll() {
 //  IMPORT TAB SWITCHER
 // ══════════════════════════════════════════════════════════════
 function switchImportTab(tab) {
-  $('sw-import').className    ='tab-sw-btn'+(tab==='import'    ?' active':'');
-  $('sw-transcribe').className='tab-sw-btn'+(tab==='transcribe'?' active':'');
-  $('panel-import').style.display    =tab==='import'    ?'':'none';
-  $('panel-transcribe').style.display=tab==='transcribe'?'':'none';
+  ['import','transcribe','align'].forEach(t=>{
+    $('sw-'+t).className='tab-sw-btn'+(tab===t?' active':'');
+    $('panel-'+t).style.display=tab===t?'':'none';
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1933,6 +1959,114 @@ function audioBufferToWav(buffer) {
 function secToSrt(sec) {
   sec=sec||0; const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.round((sec%1)*1000);
   return pad(h)+':'+pad(m)+':'+pad(s)+','+String(ms).padStart(3,'0');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ALIGN — text + audio → timecoded subtitles
+// ══════════════════════════════════════════════════════════════
+const alignDrop=$('alignDrop');
+alignDrop.addEventListener('click',   ()=>$('alignAudioInput').click());
+alignDrop.addEventListener('dragover',e=>{e.preventDefault();alignDrop.classList.add('drag');});
+alignDrop.addEventListener('dragleave',()=>alignDrop.classList.remove('drag'));
+alignDrop.addEventListener('drop',e=>{e.preventDefault();alignDrop.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setAlignFile(f);});
+$('alignAudioInput').addEventListener('change',e=>{if(e.target.files[0])setAlignFile(e.target.files[0]);e.target.value='';});
+
+function setAlignFile(f) {
+  alignAudioFile=f;
+  const info=$('alignFileInfo'), mb=(f.size/1024/1024).toFixed(1);
+  info.style.display='';
+  info.innerHTML='<div class="xc-file-row"><span class="xc-file-name">'+escHtml(f.name)+'</span>'+
+    '<span style="font-size:10px;color:var(--ink-3);flex-shrink:0">'+mb+' MB</span>'+
+    '<span class="xc-file-rm" onclick="clearAlignFile()" title="Remove">×</span></div>';
+  alignDrop.style.display='none';
+  $('alignBtn').disabled=false;
+}
+function clearAlignFile() {
+  alignAudioFile=null; $('alignFileInfo').style.display='none'; alignDrop.style.display='';
+  $('alignBtn').disabled=true;
+}
+function setAlignStatus(msg,type) {
+  const el=$('alignStatus'); if(el){el.textContent=msg;el.className='xc-status'+(type?' '+type:'');}
+}
+
+async function startAlignment() {
+  const text=($('alignText')?.value||'').trim();
+  if(!text){setAlignStatus('Paste a transcript first','err');return;}
+  if(!alignAudioFile){setAlignStatus('Select an audio file first','err');return;}
+  const btn=$('alignBtn'); btn.disabled=true;
+  showProgressIndeterminate(); setStatus('Aligning…');
+  try {
+    // Step 1 — transcribe to get word timestamps
+    setAlignStatus('Transcribing to get word timestamps…');
+    let audioBlob=alignAudioFile;
+    const isVideo=alignAudioFile.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(alignAudioFile.name);
+    if(isVideo){setAlignStatus('Extracting audio…');audioBlob=await extractAudioFromVideo(alignAudioFile);}
+
+    const keyResp=await fetch('/api/el-key');
+    if(!keyResp.ok) throw new Error('Could not load transcription key');
+    const {key:elKey}=await keyResp.json();
+    const fd=new FormData();
+    fd.append('file',audioBlob,alignAudioFile.name.replace(/\.[^.]+$/,'.mp3'));
+    fd.append('model_id',settings.elModel||'scribe_v1');
+    fd.append('timestamps_granularity','word');
+    fd.append('tag_audio_events','false');
+    const xcLang=$('xcSourceLang')?.value;
+    if(xcLang&&xcLang!=='auto') fd.append('language_code',xcLang);
+    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':elKey},body:fd});
+    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
+    const data=await resp.json();
+    const words=(data.words||[]).filter(w=>!w.type||w.type==='word');
+    if(!words.length) throw new Error('No word timestamps returned from transcription');
+
+    // Step 2 — map clean text to timestamps
+    setAlignStatus('Mapping text to timestamps…');
+    const subs=alignTextToWords(text,words);
+    if(!subs.length) throw new Error('Could not create subtitles');
+
+    subtitles=subs; translations={}; backTranslations={}; activeTab='source';
+    const nameEl=$('projectName');
+    if(nameEl&&alignAudioFile.name){const base=alignAudioFile.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');if(base)nameEl.value=base;}
+    afterLoad();
+    setAlignStatus(subs.length+' subtitles aligned ✓','ok');
+    setStatus(subs.length+' subtitles aligned','ok');
+    switchImportTab('import');
+  } catch(e){
+    setAlignStatus('Error: '+e.message,'err');
+    setStatus('Alignment error: '+e.message,'err');
+  }
+  btn.disabled=!alignAudioFile;
+  hideProgress();
+}
+
+function alignTextToWords(text, words) {
+  const chunks=chunkTextToSubs(text, maxLen(), settings.maxLinesPerSub);
+  if(!chunks.length||!words.length) return [];
+  const totalWords=words.length;
+  const cleanWordCount=Math.max(1,text.split(/\s+/).filter(Boolean).length);
+  let wordPos=0;
+  return chunks.map((chunkText,i)=>{
+    const chunkWc=chunkText.split(/\s+/).filter(Boolean).length;
+    const si=Math.min(Math.round(wordPos/cleanWordCount*totalWords),totalWords-1);
+    const ei=Math.min(Math.round((wordPos+chunkWc)/cleanWordCount*totalWords),totalWords-1);
+    const startSec=words[si]?.start??0;
+    const endSec  =words[Math.max(ei,si)]?.end??(startSec+2);
+    wordPos+=chunkWc;
+    return {index:i+1,start:secToSrt(startSec),end:secToSrt(endSec),text:chunkText};
+  });
+}
+
+function chunkTextToSubs(text,maxChars,maxLines) {
+  const words=text.replace(/\n+/g,' ').split(/\s+/).filter(Boolean);
+  const chunks=[]; let lines=[''];
+  for(const word of words){
+    const cur=lines[lines.length-1];
+    if(!cur){ lines[lines.length-1]=word; }
+    else if(cur.length+1+word.length<=maxChars){ lines[lines.length-1]=cur+' '+word; }
+    else if(lines.length<maxLines){ lines.push(word); }
+    else{ chunks.push(lines.join('\n')); lines=[word]; }
+  }
+  if(lines.some(l=>l)) chunks.push(lines.join('\n'));
+  return chunks.filter(Boolean);
 }
 
 // ══════════════════════════════════════════════════════════════
