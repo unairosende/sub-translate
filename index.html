@@ -422,6 +422,7 @@ input[type=file]{display:none}
         <span class="sg-label">Model</span>
         <select class="sg-select" id="s-transModel"></select>
       </div>
+      <div class="sg-note" id="s-rateNote" style="margin-top:6px;line-height:1.6"></div>
 
     </div>
     <div class="modal-ft">
@@ -930,7 +931,7 @@ function openSettings() {
   $('s-maxLines').value      = settings.maxLinesPerSub;
   $('s-elModel').value       = settings.elModel;
   $('s-transProvider').value = settings.translationProvider;
-  populateSettingsModelSelect(settings.translationProvider);
+  onSettingsProviderChange();   // populates model list + rate note
   $('s-transModel').value    = settings.translationModel;
   $('settingsModal').style.display = 'flex';
 }
@@ -950,8 +951,20 @@ function saveSettings() {
   updateLimitBox();
   renderCurrentView();
 }
+const PROVIDER_DASHBOARDS = {
+  gemini:     { url:'https://aistudio.google.com/plan_information', label:'Google AI Studio — limits & quota' },
+  groq:       { url:'https://console.groq.com/settings/limits',     label:'Groq console — rate limits' },
+  openrouter: { url:'https://openrouter.ai/settings/limits',        label:'OpenRouter — usage & limits' },
+  mistral:    { url:'https://console.mistral.ai/usage',             label:'Mistral console — usage' },
+};
 function onSettingsProviderChange() {
-  populateSettingsModelSelect($('s-transProvider').value);
+  const p = $('s-transProvider').value;
+  populateSettingsModelSelect(p);
+  const note = $('s-rateNote'); if(!note) return;
+  const d = PROVIDER_DASHBOARDS[p];
+  note.innerHTML = d
+    ? `Limits: <a href="${d.url}" target="_blank" rel="noopener" style="color:var(--accent-ink);text-decoration:underline">${d.label}</a>`
+    : '';
 }
 function populateSettingsModelSelect(provider) {
   const sel = $('s-transModel'); sel.innerHTML = '';
@@ -1268,7 +1281,7 @@ function parseTXT(text) {
 //  CHAR HELPERS
 // ══════════════════════════════════════════════════════════════
 function charStatus(text) {
-  const lines=text.split('\n'), longest=Math.max(...lines.map(l=>l.length));
+  const lines=(text||'').split('\n'), longest=Math.max(0,...lines.map(l=>l.length));
   if(longest>maxLen()||lines.length>settings.maxLinesPerSub) return 'error';
   if(longest>Math.floor(maxLen()*0.85)) return 'warn';
   return 'ok';
@@ -1333,6 +1346,7 @@ function makeCard(sub,editable,lang) {
   const pct=Math.min(100,Math.round(longest/maxLen()*100));
   const card=el('div','sub-card'+(st==='error'?' error':st==='warn'?' warn':'')+(editable?' editable':''));
   card.dataset.idx=sub.index; card.dataset.lang=lang;
+  const safeText = sub.text || '';
   const splitBtnHtml = lang==='source'
     ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`
     : '';
@@ -1340,7 +1354,7 @@ function makeCard(sub,editable,lang) {
     `<div class="sub-idx">#${sub.index}</div>`+
     `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>`+
     (editable?`<svg class="edit-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`:'')+
-    `<div class="sub-text">${escHtml(sub.text)}</div>`+
+    `<div class="sub-text">${escHtml(safeText)}</div>`+
     `<div class="sub-meta"><span class="sub-chars ${st==='ok'?'':st}">${longest}/${maxLen()}</span><div class="char-bar"><div class="char-bar-fill ${st==='ok'?'':st}" style="width:${pct}%"></div></div>${splitBtnHtml}</div>`;
   if(editable) card.addEventListener('click',()=>openEdit(card,sub,lang));
 
@@ -1626,7 +1640,7 @@ async function fixOverlength() {
     try{
       const raw=await callProvider(prompt,null,3);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g,'').trim());}catch{parsed=null;}
-      if(Array.isArray(parsed)) batch.forEach((s,j)=>{if(parsed[j]!==undefined){const f=subs.find(x=>x.index===s.index);if(f){f.text=parsed[j];fixed++;}}});
+      if(Array.isArray(parsed)) batch.forEach((s,j)=>{const txt=parsed[j];if(typeof txt==='string'&&txt.trim()){const f=subs.find(x=>x.index===s.index);if(f){f.text=txt;fixed++;}}});
     }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';hideProgress();return;}
     showProgress(Math.round((i+batch.length)/toFix.length*100));
   }
@@ -1724,10 +1738,11 @@ function exportAllTranslations() {
   const langs=Object.keys(translations);
   if(!langs.length){setStatus('No translations to export','err');return;}
   const fmt=$('exportAllFormat').value;
-  const srcLabel=$('srcLangSelect')?.value||'Source';
+  const srcLangVal=$('srcLangSelect')?.value||'Source';
+  const srcLabel=srcLangVal==='Auto-detect'?'Source':srcLangVal;
   const header=['Start Time','End Time',srcLabel,...langs];
   const rows=subtitles.map(src=>{
-    const row=[src.start,src.end,src.text];
+    const row=[src.start,src.end,src.text||''];
     langs.forEach(lang=>{
       const f=getFinalSubs(lang).find(s=>s.index===src.index);
       row.push(f?f.text:'');
