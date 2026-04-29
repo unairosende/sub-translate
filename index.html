@@ -1724,9 +1724,10 @@ function exportAllTranslations() {
   const langs=Object.keys(translations);
   if(!langs.length){setStatus('No translations to export','err');return;}
   const fmt=$('exportAllFormat').value;
-  const header=['Start Time','End Time',...langs];
+  const srcLabel=$('srcLangSelect')?.value||'Source';
+  const header=['Start Time','End Time',srcLabel,...langs];
   const rows=subtitles.map(src=>{
-    const row=[src.start,src.end];
+    const row=[src.start,src.end,src.text];
     langs.forEach(lang=>{
       const f=getFinalSubs(lang).find(s=>s.index===src.index);
       row.push(f?f.text:'');
@@ -1813,7 +1814,7 @@ async function startTranscription() {
     setXcStatus('Sending to ElevenLabs Scribe…'); $('xcProgressFill').style.width='60%';
     const lang=$('xcSourceLang').value;
     const fd=new FormData();
-    fd.append('audio',audioBlob,xcFile.name.replace(/\.[^.]+$/,'.mp3'));
+    fd.append('file',audioBlob,xcFile.name.replace(/\.[^.]+$/,'.mp3'));
     fd.append('model_id',settings.elModel||'scribe_v1');
     fd.append('timestamps_granularity','word');
     fd.append('tag_audio_events','false');
