@@ -341,16 +341,42 @@ input[type=file]{display:none}
 .split-btn:hover{background:var(--line-2);color:var(--ink-2)}
 
 /* ── Timeline panel ── */
-.tl-panel{height:180px;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:height .18s ease}
-.tl-panel.tl-collapsed{height:34px}
-.tl-panel.tl-max{height:50vh}
+.tl-panel{height:210px;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:height .18s ease}
+.tl-panel.tl-collapsed{height:37px}
+.tl-panel.tl-max{height:55vh}
 .tl-handle{height:4px;cursor:ns-resize;flex-shrink:0;background:transparent;transition:background .12s}
 .tl-handle:hover,.tl-handle.active{background:var(--accent-soft)}
-.tl-bar{height:34px;padding:0 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;border-bottom:1px solid var(--line-2);background:var(--panel)}
-.tl-time{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;min-width:52px;white-space:nowrap}
-.tl-audio-label{font-size:11px;color:var(--ink-3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-canvas-wrap{flex:1;overflow:hidden;position:relative;background:var(--bg)}
-#tlCanvas{display:block;position:absolute;top:0;left:0}
+/* Info bar */
+.tl-infobar{height:37px;padding:0 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;border-bottom:1px solid var(--line-2);background:var(--panel)}
+.tl-play-btn{width:24px;height:24px;border-radius:50%;background:#1a1915;border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:9px;padding-left:1px;line-height:1}
+.tl-play-btn:hover{background:#333;transform:scale(1.05)}
+.tl-timecode{font-family:var(--mono);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-badge{font-size:10.5px;padding:2px 7px;border-radius:5px;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tl-badge-cue{background:var(--bg);color:var(--ink-2);border:1px solid var(--line)}
+.tl-badge-chars{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.tl-badge-cps{background:var(--bg);color:var(--ink-3);border:1px solid var(--line)}
+.tl-view-toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex-shrink:0}
+.tl-view-toggle button{padding:2px 8px;font-size:10.5px;background:transparent;border:none;cursor:pointer;color:var(--ink-3);transition:background .1s,color .1s}
+.tl-view-toggle button.active{background:var(--bg);color:var(--ink-1);font-weight:500}
+.tl-snap-label{display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--ink-3);cursor:pointer;user-select:none;flex-shrink:0}
+.tl-snap-label input{accent-color:var(--accent)}
+/* Scroll/canvas area */
+.tl-scroll-wrap{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;background:#f5f4f0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.tl-scroll-wrap::-webkit-scrollbar{height:4px}
+.tl-scroll-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+#tlCanvas{display:block}
+/* Bottom bar */
+.tl-bottombar{height:37px;padding:0 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;border-top:1px solid var(--line-2);background:var(--panel)}
+.tl-lang-pills{display:flex;gap:3px;align-items:center;flex-wrap:nowrap;overflow:hidden}
+.tl-lang-pill{font-size:11px;padding:3px 11px;border-radius:20px;border:1px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:background .1s,color .1s,border-color .1s}
+.tl-lang-pill:hover{background:var(--bg)}
+.tl-lang-pill.active{background:#1a1915;color:#fff;border-color:#1a1915}
+.tl-lang-pill.tl-add{color:var(--ink-3);font-size:15px;padding:1px 8px;line-height:1}
+.tl-zoom-ctrl{display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0}
+.tl-zoom-ctrl .tl-zoom-btn{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);background:var(--bg);font-size:14px;cursor:pointer;color:var(--ink-2);display:flex;align-items:center;justify-content:center;line-height:1}
+.tl-zoom-ctrl .tl-zoom-btn:hover{background:var(--line)}
+#tlZoomSlider{width:90px;accent-color:var(--accent);cursor:pointer}
+.tl-zoom-label{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);min-width:32px;text-align:right}
 
 /* ── Command palette ── */
 .cmd-overlay{position:fixed;inset:0;background:rgba(22,20,15,.2);backdrop-filter:blur(4px);display:flex;justify-content:center;padding-top:80px;z-index:2000}
@@ -810,18 +836,39 @@ input[type=file]{display:none}
 
   <!-- ── Timeline panel ── -->
   <div class="tl-panel" id="tlPanel">
+    <!-- Resize handle -->
     <div class="tl-handle" id="tlHandle" title="Drag to resize"></div>
-    <div class="tl-bar">
-      <span class="tl-time" id="tlTime">—</span>
-      <span class="tl-audio-label" id="tlAudioLabel" title=""></span>
+    <!-- Info bar -->
+    <div class="tl-infobar">
+      <button class="tl-play-btn" id="tlPlayBtn" onclick="tlTogglePlay()" title="Play / pause">▶</button>
+      <span class="tl-timecode" id="tlTimecode">00:00:00,000</span>
+      <span class="tl-badge tl-badge-cue" id="tlCueBadge" style="display:none">Cue #—</span>
+      <span class="tl-badge tl-badge-chars" id="tlCharsBadge" style="display:none">— chars</span>
+      <span class="tl-badge tl-badge-cps" id="tlCpsBadge" style="display:none">— cps</span>
       <div style="flex:1"></div>
+      <div class="tl-view-toggle">
+        <button id="tlBtnBoxes" class="active" onclick="tlSetView('boxes')">Boxes</button>
+        <button id="tlBtnBars" onclick="tlSetView('bars')">Bars</button>
+      </div>
+      <label class="tl-snap-label"><input type="checkbox" id="tlSnap" checked> Snap</label>
       <input type="file" id="tlAudioInput" accept="audio/*,video/*" style="display:none" onchange="tlLoadFile(this.files[0])">
-      <button class="btn" style="font-size:11px;padding:3px 9px;height:26px" onclick="$('tlAudioInput').click()">Load audio</button>
-      <button class="btn btn-ghost" id="tlToggleBtn" onclick="tlToggle()" title="Hide / show timeline" style="font-size:13px;padding:3px 7px;height:26px;line-height:1">⌄</button>
-      <button class="btn btn-ghost" id="tlMaxBtn" onclick="tlMaximize()" title="Expand timeline" style="font-size:13px;padding:3px 7px;height:26px;line-height:1">⤢</button>
+      <button class="btn" style="font-size:10.5px;padding:2px 8px;height:25px" onclick="$('tlAudioInput').click()">Load audio</button>
+      <button class="btn btn-ghost" id="tlToggleBtn" onclick="tlToggle()" title="Hide timeline" style="font-size:12px;padding:2px 7px;height:25px">⌄</button>
+      <button class="btn btn-ghost" id="tlMaxBtn" onclick="tlMaximize()" title="Expand" style="font-size:12px;padding:2px 7px;height:25px">⤢</button>
     </div>
-    <div class="tl-canvas-wrap" id="tlCanvasWrap">
+    <!-- Waveform canvas (scrollable) -->
+    <div class="tl-scroll-wrap" id="tlScrollWrap">
       <canvas id="tlCanvas"></canvas>
+    </div>
+    <!-- Bottom bar: language pills + zoom -->
+    <div class="tl-bottombar">
+      <div class="tl-lang-pills" id="tlLangPills"></div>
+      <div class="tl-zoom-ctrl">
+        <button class="tl-zoom-btn" onclick="tlZoomOut()">−</button>
+        <input type="range" id="tlZoomSlider" min="1" max="20" step="0.1" value="1" oninput="tlSetZoom(+this.value)">
+        <button class="tl-zoom-btn" onclick="tlZoomIn()">+</button>
+        <span class="tl-zoom-label" id="tlZoomLabel">1.0×</span>
+      </div>
     </div>
   </div>
 
@@ -1656,6 +1703,7 @@ async function startTranslation() {
   setStatus('Done — '+result.length+' subtitles','ok');
   updateExportAllBtn(); rebuildTabs(); renderCurrentView();
   updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
+  tlRebuildLangPills();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2304,21 +2352,31 @@ function loadStateLocally() {
 //  TIMELINE
 // ══════════════════════════════════════════════════════════════
 let tlAudioBuf=null, tlPeaks=[], tlDuration=0;
-let tlView={start:0, end:0};          // visible time range (seconds)
-let tlPlayhead=-1;                    // current playhead sec (-1 = hidden)
-let tlDragging=null;                  // {type:'move'|'left'|'right', idx, origStart, origEnd, anchorX, anchorTime}
-let tlIsMax=false, tlIsCollapsed=false;
-let tlAnimId=null;
-const TL_WAVEFORM_COLOR='#c5c2bb';
-const TL_SUB_COLOR='rgba(220,100,70,0.22)';
-const TL_SUB_BORDER='rgba(220,100,70,0.72)';
-const TL_SUB_ACTIVE='rgba(220,100,70,0.42)';
-const TL_RULER_COLOR='#aaa9a2';
-const TL_PLAYHEAD_COLOR='oklch(0.66 0.16 28)';
+let tlZoom=1;
+let tlActiveCue=-1;
+let tlLang='source';
+let tlPlayhead=0;
+let tlPlaying=false, tlPlayAudioCtx=null, tlPlaySrc=null, tlPlayStartedAt=0, tlPlayOffset=0;
+let tlIsCollapsed=false, tlIsMax=false;
+let tlViewMode='boxes';
+const TLC={
+  bg:'#f5f4f0', rulerBg:'#eeecea', rulerText:'#9a9890',
+  waveDim:'#ccc9c1', waveActive:'#d95a38',
+  subFill:'rgba(215,90,55,0.10)', subBorder:'rgba(215,90,55,0.42)',
+  subActive:'rgba(215,90,55,0.22)', subActiveBorder:'rgba(200,60,30,0.88)',
+  subWarn:'rgba(217,119,6,0.55)',
+  subText:'rgba(90,35,15,0.70)', subTextActive:'rgba(180,45,10,1)',
+  playhead:'#d94030', playheadFlag:'#d94030',
+};
 
 function fmtTlSec(s){
-  const m=Math.floor(s/60), sec=(s%60).toFixed(1).padStart(4,'0');
-  return m+':'+sec;
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=Math.floor(s%60), ms=Math.round((s%1)*1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+}
+function fmtTlSecShort(s){
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=Math.floor(s%60);
+  if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
 function tlSrtToSec(srt){
@@ -2328,127 +2386,158 @@ function tlSrtToSec(srt){
   return +m[1]*3600 + +m[2]*60 + +m[3] + +m[4]/1000;
 }
 
+function tlGetSubs(){
+  if(tlLang==='source') return subtitles;
+  return translations[tlLang]?getFinalSubs(tlLang):[];
+}
+function tlToPx(t,W){ return (t/Math.max(0.1,tlDuration))*W; }
+function tlToSec(x,W){ return (x/W)*Math.max(0.1,tlDuration); }
+function tlGetCanvasW(){ const w=$('tlScrollWrap'); return Math.max(300,(w?w.clientWidth||w.offsetWidth:800)*tlZoom); }
+function tlGetCanvasH(){ const w=$('tlScrollWrap'); return Math.max(70,w?w.clientHeight||w.offsetHeight:130); }
+
 async function tlLoadFile(file){
   if(!file) return;
-  $('tlAudioLabel').textContent=file.name;
-  $('tlAudioLabel').title=file.name;
-  $('tlTime').textContent='Loading…';
   try {
     const isVideo=file.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(file.name);
     let blob=file;
-    if(isVideo){ try{ blob=await extractAudioFromVideo(file); }catch(e){ /* fallback raw */ } }
+    if(isVideo){ try{ blob=await extractAudioFromVideo(file); }catch(e){} }
     const ab=await blob.arrayBuffer();
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const buf=await ctx.decodeAudioData(ab);
-    await ctx.close();
+    const actx=new (window.AudioContext||window.webkitAudioContext)();
+    const buf=await actx.decodeAudioData(ab);
+    await actx.close();
     tlAudioBuf=buf; tlDuration=buf.duration;
-    // Downsample to ~2000 peaks
     const ch=buf.getChannelData(0);
-    const n=2000, step=Math.floor(ch.length/n);
+    const N=4000, step=Math.max(1,Math.floor(ch.length/N));
     tlPeaks=[];
-    for(let i=0;i<n;i++){
+    for(let i=0;i<N;i++){
       let max=0;
-      for(let j=0;j<step;j++){ const v=Math.abs(ch[i*step+j]||0); if(v>max) max=v; }
+      for(let j=0;j<step;j++){const v=Math.abs(ch[i*step+j]||0);if(v>max)max=v;}
       tlPeaks.push(max);
     }
-    // normalise
     const peak=Math.max(...tlPeaks,0.001);
     tlPeaks=tlPeaks.map(v=>v/peak);
-    tlView={start:0, end:tlDuration};
+    tlZoom=1; $('tlZoomSlider').value=1; $('tlZoomLabel').textContent='1.0×';
+    tlPlayhead=0; tlActiveCue=-1;
+    if(tlIsCollapsed){tlIsCollapsed=false;$('tlPanel').classList.remove('tl-collapsed');$('tlToggleBtn').style.transform='';}
+    tlRebuildLangPills();
     tlRender();
-    $('tlTime').textContent=fmtTlSec(0);
-    // un-collapse if collapsed
-    if(tlIsCollapsed){ tlIsCollapsed=false; $('tlPanel').classList.remove('tl-collapsed'); $('tlToggleBtn').style.transform=''; }
-  } catch(e){
-    $('tlAudioLabel').textContent='Error loading audio';
-    console.warn('TL load error',e);
-  }
+    tlUpdateInfoBar();
+  } catch(e){ console.warn('TL load',e); }
 }
 
-function tlAutoLoad(file){
-  // Called automatically after transcription/alignment
-  if(file) tlLoadFile(file);
-}
+function tlAutoLoad(file){ if(file) tlLoadFile(file); }
 
 function tlRender(){
-  const canvas=$('tlCanvas');
-  const wrap=$('tlCanvasWrap');
-  if(!wrap||!canvas) return;
-  const W=wrap.clientWidth||wrap.offsetWidth||800;
-  const H=wrap.clientHeight||wrap.offsetHeight||130;
-  if(W<10||H<10) return;
-  if(canvas.width!==W) canvas.width=W;
-  if(canvas.height!==H) canvas.height=H;
+  const canvas=$('tlCanvas'), wrap=$('tlScrollWrap');
+  if(!canvas||!wrap) return;
+  const W=tlGetCanvasW(), H=tlGetCanvasH();
+  if(canvas.width!==W){canvas.width=W;canvas.style.width=W+'px';}
+  if(canvas.height!==H){canvas.height=H;canvas.style.height=H+'px';}
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,W,H);
 
-  const vStart=tlView.start, vEnd=tlView.end, vDur=Math.max(0.1,vEnd-vStart);
-  const toPx=t=>((t-vStart)/vDur)*W;
-  const toSec=x=>vStart+(x/W)*vDur;
+  const RULER_H=18, BLOCK_H=38, BLOCK_Y=RULER_H;
+  const WAVE_Y=RULER_H+BLOCK_H, WAVE_H=Math.max(20,H-RULER_H-BLOCK_H), WAVE_MID=WAVE_Y+WAVE_H/2;
 
-  // Background
-  ctx.fillStyle='#f8f7f3'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=TLC.bg; ctx.fillRect(0,0,W,H);
 
-  // Ruler
-  const RULER_H=16;
-  ctx.fillStyle='#f0efe9'; ctx.fillRect(0,0,W,RULER_H);
-  const tickSecs=niceTick(vDur, W/80);
-  const firstTick=Math.ceil(vStart/tickSecs)*tickSecs;
-  ctx.fillStyle=TL_RULER_COLOR; ctx.font='9px system-ui,sans-serif'; ctx.textBaseline='middle';
-  for(let t=firstTick;t<=vEnd+tickSecs*0.01;t+=tickSecs){
-    const x=Math.round(toPx(t));
-    ctx.fillStyle=TL_RULER_COLOR;
-    ctx.fillRect(x,RULER_H-5,1,5);
-    ctx.fillStyle='#888'; ctx.fillText(fmtTlSec(t),x+3,RULER_H/2+1);
+  // ── Ruler ──
+  ctx.fillStyle=TLC.rulerBg; ctx.fillRect(0,0,W,RULER_H);
+  const tickSecs=niceTick(tlDuration,W/55);
+  ctx.fillStyle=TLC.rulerText; ctx.font='9px system-ui,sans-serif'; ctx.textBaseline='middle';
+  for(let t=0;t<=tlDuration+tickSecs*0.01;t+=tickSecs){
+    const x=Math.round(tlToPx(t,W));
+    ctx.fillStyle=TLC.rulerText; ctx.fillRect(x,RULER_H-6,1,6);
+    if(x>3){ctx.fillStyle=TLC.rulerText; ctx.fillText(fmtTlSecShort(t),x+3,RULER_H/2);}
   }
 
-  // Waveform
+  const subs=tlGetSubs();
+
+  // ── Waveform bars ──
   if(tlPeaks.length){
-    const waveY=RULER_H, waveH=H-RULER_H;
-    const mid=waveY+waveH/2;
-    const amp=(waveH/2)*0.85;
-    ctx.fillStyle=TL_WAVEFORM_COLOR;
-    for(let px=0;px<W;px++){
-      const t0=vStart+(px/W)*vDur;
-      const t1=vStart+((px+1)/W)*vDur;
-      const i0=Math.floor((t0/tlDuration)*tlPeaks.length);
-      const i1=Math.ceil((t1/tlDuration)*tlPeaks.length);
+    const BAR_W=Math.max(1,Math.round(W/tlPeaks.length*0.7)), GAP=1, STEP=BAR_W+GAP;
+    const bars=Math.floor(W/STEP);
+    const amp=(WAVE_H/2)*0.84;
+    for(let bi=0;bi<bars;bi++){
+      const t0=(bi*STEP/W)*tlDuration, t1=((bi*STEP+STEP)/W)*tlDuration;
+      const i0=Math.floor((t0/tlDuration)*tlPeaks.length), i1=Math.ceil((t1/tlDuration)*tlPeaks.length);
       let peak=0;
       for(let i=Math.max(0,i0);i<Math.min(tlPeaks.length,i1+1);i++) if(tlPeaks[i]>peak) peak=tlPeaks[i];
-      const h=Math.max(1,peak*amp);
-      ctx.fillRect(px,mid-h,1,h*2);
+      const h=Math.max(2,peak*amp), x=bi*STEP;
+      const underActive=tlActiveCue>=0&&subs[tlActiveCue]&&
+        t0>=tlSrtToSec(subs[tlActiveCue].start)&&t0<=tlSrtToSec(subs[tlActiveCue].end);
+      ctx.fillStyle=underActive?TLC.waveActive:TLC.waveDim;
+      ctx.fillRect(x,WAVE_MID-h,BAR_W,h*2);
     }
   }
 
-  // Subtitle blocks
-  const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
-  subs.forEach((s,i)=>{
-    const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
-    if(s1<vStart||s0>vEnd) return;
-    const x0=Math.max(0,toPx(s0)), x1=Math.min(W,toPx(s1));
-    const bW=x1-x0; if(bW<1) return;
-    const bH=H-RULER_H-2, bY=RULER_H+1;
-    ctx.fillStyle=TL_SUB_COLOR; ctx.fillRect(x0,bY,bW,bH);
-    ctx.strokeStyle=TL_SUB_BORDER; ctx.lineWidth=1; ctx.strokeRect(x0+0.5,bY+0.5,bW-1,bH-1);
-    // resize handles
-    ctx.fillStyle=TL_SUB_BORDER;
-    ctx.fillRect(x0,bY,3,bH);
-    ctx.fillRect(x1-3,bY,3,bH);
-    // label
-    if(bW>20){
-      ctx.fillStyle='rgba(80,30,10,0.7)';
-      ctx.font='9.5px system-ui,sans-serif'; ctx.textBaseline='top';
-      const lbl='#'+s.index;
-      ctx.fillText(lbl,x0+5,bY+3);
-    }
-  });
-
-  // Playhead
-  if(tlPlayhead>=0&&tlPlayhead>=vStart&&tlPlayhead<=vEnd){
-    const px=toPx(tlPlayhead);
-    ctx.strokeStyle=TL_PLAYHEAD_COLOR; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+  // ── Subtitle blocks ──
+  if(tlViewMode==='boxes'){
+    subs.forEach((s,i)=>{
+      const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
+      const x0=tlToPx(s0,W), x1=tlToPx(s1,W);
+      const bW=Math.max(3,x1-x0), bH=BLOCK_H-8, bY=BLOCK_Y+4;
+      const isActive=i===tlActiveCue;
+      const cst=charStatus(s.text);
+      ctx.fillStyle=isActive?TLC.subActive:TLC.subFill;
+      tlRoundRect(ctx,x0,bY,bW,bH,5,true,false);
+      ctx.strokeStyle=isActive?TLC.subActiveBorder:(cst!=='ok'?TLC.subWarn:TLC.subBorder);
+      ctx.lineWidth=isActive?1.8:1;
+      tlRoundRect(ctx,x0+0.5,bY+0.5,Math.max(1,bW-1),bH-1,4.5,false,true);
+      // edge handles
+      ctx.fillStyle=isActive?TLC.subActiveBorder:TLC.subBorder;
+      tlRoundRect(ctx,x0,bY,3,bH,2,true,false);
+      if(bW>5) tlRoundRect(ctx,x1-3,bY,3,bH,2,true,false);
+      // label
+      if(bW>14){
+        ctx.fillStyle=isActive?TLC.subTextActive:TLC.subText;
+        ctx.font=(isActive?'600 ':'')+'9.5px system-ui,sans-serif';
+        ctx.textBaseline='middle';
+        ctx.fillText('#'+s.index,x0+6,bY+bH/2);
+        if(bW>52&&s.text){
+          const txt=tlTruncateText(ctx,s.text.replace(/\n/g,' '),bW-32);
+          if(txt) ctx.fillText(txt,x0+28,bY+bH/2);
+        }
+      }
+    });
+  } else {
+    // Bars mode — colored waveform regions
+    subs.forEach((s,i)=>{
+      const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
+      const x0=tlToPx(s0,W), x1=tlToPx(s1,W), bW=x1-x0;
+      if(bW<1) return;
+      const isActive=i===tlActiveCue;
+      ctx.fillStyle=isActive?'rgba(215,90,55,0.16)':'rgba(215,90,55,0.06)';
+      ctx.fillRect(x0,WAVE_Y,bW,WAVE_H);
+      ctx.strokeStyle=isActive?TLC.subActiveBorder:TLC.subBorder;
+      ctx.lineWidth=1; ctx.strokeRect(x0+0.5,WAVE_Y+0.5,bW-1,WAVE_H-1);
+    });
   }
+
+  // ── Playhead ──
+  const px=tlToPx(tlPlayhead,W);
+  ctx.strokeStyle=TLC.playhead; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(px,RULER_H); ctx.lineTo(px,H); ctx.stroke();
+  // Flag
+  ctx.fillStyle=TLC.playheadFlag;
+  ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px+10,0); ctx.lineTo(px+10,8); ctx.lineTo(px,13); ctx.closePath(); ctx.fill();
+}
+
+function tlRoundRect(ctx,x,y,w,h,r,fill,stroke){
+  if(w<0){x+=w;w=-w;} if(h<0){y+=h;h=-h;} r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+  if(fill) ctx.fill(); if(stroke) ctx.stroke();
+}
+
+function tlTruncateText(ctx,text,maxW){
+  if(ctx.measureText(text).width<=maxW) return text;
+  let t=text;
+  while(t.length>1&&ctx.measureText(t+'…').width>maxW) t=t.slice(0,-1);
+  return t+'…';
 }
 
 function niceTick(range, minPx) {
@@ -2457,190 +2546,211 @@ function niceTick(range, minPx) {
   return 600;
 }
 
-function tlHit(x, y){
-  // Returns {type:'move'|'left'|'right', subIndex} or null
-  const canvas=$('tlCanvas');
-  const W=canvas.width, H=canvas.height;
-  const RULER_H=16;
-  if(y<RULER_H) return null;
-  const vDur=Math.max(0.1,tlView.end-tlView.start);
-  const toSec=x=>tlView.start+(x/W)*vDur;
-  const toPx=t=>((t-tlView.start)/vDur)*W;
-  const t=toSec(x);
-  const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
-  // Check resize handles first (higher priority), iterate reversed for top-most
+function tlUpdateInfoBar(){
+  const subs=tlGetSubs(), s=subs[tlActiveCue];
+  $('tlTimecode').textContent=fmtTlSec(tlPlayhead)+(tlDuration?' / '+fmtTlSec(tlDuration):'');
+  if(s){
+    const dur=Math.max(0.01,tlSrtToSec(s.end)-tlSrtToSec(s.start));
+    const chars=(s.text||'').replace(/\n/g,' ').length;
+    const cps=(chars/dur).toFixed(1);
+    $('tlCueBadge').textContent='Cue #'+s.index; $('tlCueBadge').style.display='';
+    $('tlCharsBadge').textContent=chars+' / '+maxLen()+' chars'; $('tlCharsBadge').style.display='';
+    $('tlCpsBadge').textContent=cps+' cps'; $('tlCpsBadge').style.display='';
+  } else {
+    ['tlCueBadge','tlCharsBadge','tlCpsBadge'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
+  }
+}
+
+function tlRebuildLangPills(){
+  const el=$('tlLangPills'); if(!el) return;
+  const langs=['source',...Object.keys(translations)];
+  if(!langs.includes(tlLang)) tlLang='source';
+  el.innerHTML='';
+  langs.forEach(lang=>{
+    const btn=document.createElement('button');
+    btn.className='tl-lang-pill'+(tlLang===lang?' active':'');
+    btn.textContent=lang==='source'?'Original':lang;
+    btn.onclick=()=>{ tlLang=lang; tlActiveCue=-1; tlRebuildLangPills(); tlRender(); tlUpdateInfoBar(); };
+    el.appendChild(btn);
+  });
+  const add=document.createElement('button');
+  add.className='tl-lang-pill tl-add'; add.textContent='+'; add.title='Translate first to add a language';
+  el.appendChild(add);
+}
+
+function tlSetZoom(z){
+  tlZoom=Math.max(1,Math.min(30,z));
+  $('tlZoomSlider').value=tlZoom;
+  $('tlZoomLabel').textContent=tlZoom.toFixed(1)+'×';
+  tlRender();
+  if(tlActiveCue>=0) tlScrollToCue(tlActiveCue);
+}
+function tlZoomIn(){ tlSetZoom(tlZoom*1.35); }
+function tlZoomOut(){ tlSetZoom(Math.max(1,tlZoom/1.35)); }
+
+function tlScrollToCue(idx){
+  const wrap=$('tlScrollWrap'); if(!wrap||!tlDuration) return;
+  const subs=tlGetSubs(), s=subs[idx]; if(!s) return;
+  const W=tlGetCanvasW();
+  const mid=(tlToPx(tlSrtToSec(s.start),W)+tlToPx(tlSrtToSec(s.end),W))/2;
+  wrap.scrollLeft=Math.max(0,mid-wrap.clientWidth/2);
+}
+
+function tlSetView(mode){
+  tlViewMode=mode;
+  $('tlBtnBoxes').classList.toggle('active',mode==='boxes');
+  $('tlBtnBars').classList.toggle('active',mode==='bars');
+  tlRender();
+}
+
+// ── Playback ──
+function tlTogglePlay(){
+  if(tlPlaying){ tlStopPlay(); return; }
+  if(!tlAudioBuf) return;
+  const actx=new (window.AudioContext||window.webkitAudioContext)();
+  tlPlayAudioCtx=actx;
+  const src=actx.createBufferSource();
+  src.buffer=tlAudioBuf; src.connect(actx.destination);
+  tlPlayOffset=tlPlayhead; tlPlayStartedAt=actx.currentTime;
+  src.start(0,Math.max(0,tlPlayOffset));
+  tlPlaySrc=src; tlPlaying=true;
+  $('tlPlayBtn').innerHTML='⏸';
+  src.onended=()=>{ if(tlPlaying) tlStopPlay(); };
+  function tick(){
+    if(!tlPlaying) return;
+    tlPlayhead=Math.min(tlDuration,tlPlayOffset+(tlPlayAudioCtx.currentTime-tlPlayStartedAt));
+    // auto-select cue
+    const subs=tlGetSubs();
+    const ci=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+    if(ci>=0&&ci!==tlActiveCue){ tlActiveCue=ci; tlScrollToCue(ci); }
+    tlRender(); tlUpdateInfoBar();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+function tlStopPlay(){
+  try{ if(tlPlaySrc) tlPlaySrc.stop(); }catch(e){}
+  try{ if(tlPlayAudioCtx) tlPlayAudioCtx.close(); }catch(e){}
+  tlPlaying=false; tlPlaySrc=null; tlPlayAudioCtx=null;
+  const btn=$('tlPlayBtn'); if(btn) btn.innerHTML='▶';
+}
+
+// ── Hit test ──
+function tlHit(x,y,W,H){
+  const RULER_H=18, BLOCK_H=38, BLOCK_Y=RULER_H;
+  const subs=tlGetSubs();
   for(let i=subs.length-1;i>=0;i--){
     const s=subs[i];
-    const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
-    const x0=toPx(s0), x1=toPx(s1);
-    const HANDLE=5;
-    if(x>=x0-HANDLE&&x<=x0+HANDLE&&y>=RULER_H) return {type:'left', idx:i};
-    if(x>=x1-HANDLE&&x<=x1+HANDLE&&y>=RULER_H) return {type:'right', idx:i};
-    if(x>=x0&&x<=x1&&y>=RULER_H) return {type:'move', idx:i};
+    const x0=tlToPx(tlSrtToSec(s.start),W), x1=tlToPx(tlSrtToSec(s.end),W);
+    const HANDLE=7;
+    if(y>=BLOCK_Y&&y<=BLOCK_Y+BLOCK_H){
+      if(x>=x0-HANDLE&&x<=x0+HANDLE) return {type:'left',idx:i};
+      if(x>=x1-HANDLE&&x<=x1+HANDLE) return {type:'right',idx:i};
+      if(x>=x0&&x<=x1) return {type:'move',idx:i};
+    }
   }
   return null;
 }
 
-// Mouse events on canvas
+// ── Canvas mouse events ──
 (function(){
-  const canvas=()=>$('tlCanvas');
-  let dragging=null;
-
-  function getTime(e){
-    const c=canvas(); if(!c) return 0;
-    const rect=c.getBoundingClientRect();
-    const x=(e.clientX-rect.left)*(c.width/rect.width);
-    const vDur=Math.max(0.1,tlView.end-tlView.start);
-    return tlView.start+(x/c.width)*vDur;
-  }
-  function getPx(e){
-    const c=canvas(); if(!c) return 0;
-    const rect=c.getBoundingClientRect();
-    return (e.clientX-rect.left)*(c.width/rect.width);
-  }
-
-  document.addEventListener('mousemove',e=>{
-    if(!dragging) return;
-    const nowT=getTime(e);
-    const dt=nowT-dragging.anchorTime;
-    const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
-    const s=subs[dragging.idx]; if(!s) return;
-    const minDur=0.05;
-    if(dragging.type==='move'){
-      const dur=tlSrtToSec(dragging.origEnd)-tlSrtToSec(dragging.origStart);
-      let ns=Math.max(0,dragging.origStart+dt);
-      s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
-    } else if(dragging.type==='left'){
-      let ns=Math.min(dragging.origEnd-minDur, dragging.origStart+dt);
-      ns=Math.max(0,ns);
-      s.start=secToSrt(ns);
-    } else if(dragging.type==='right'){
-      let ne=Math.max(dragging.origStart+minDur, dragging.origEnd+dt);
-      s.end=secToSrt(ne);
-    }
-    tlRender(); renderCurrentView();
-  });
-
-  document.addEventListener('mouseup',e=>{
-    if(!dragging) return;
-    dragging=null;
-    saveStateLocally();
-  });
+  let drag=null;
+  function cvsCoord(e,c){ const r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)}; }
 
   function attachCanvasEvents(){
     const c=$('tlCanvas'); if(!c||c._tlEventsAttached) return;
     c._tlEventsAttached=true;
+
     c.addEventListener('mousedown',e=>{
-      const c=canvas(); if(!c) return;
-      const rect=c.getBoundingClientRect();
-      const x=(e.clientX-rect.left)*(c.width/rect.width);
-      const y=(e.clientY-rect.top)*(c.height/rect.height);
-      const hit=tlHit(x,y);
+      const {x,y}=cvsCoord(e,c);
+      const hit=tlHit(x,y,c.width,c.height);
       if(hit){
         pushUndo();
-        const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
-        const s=subs[hit.idx]; if(!s) return;
-        dragging={
-          type:hit.type, idx:hit.idx,
-          origStart:tlSrtToSec(s.start), origEnd:tlSrtToSec(s.end),
-          anchorTime:getTime(e),
-        };
-        e.preventDefault();
+        const subs=tlGetSubs(), s=subs[hit.idx]; if(!s) return;
+        drag={type:hit.type,idx:hit.idx,origStart:tlSrtToSec(s.start),origEnd:tlSrtToSec(s.end),anchorX:x};
+        tlActiveCue=hit.idx; tlRender(); tlUpdateInfoBar(); e.preventDefault();
       } else {
-        // Click on ruler or empty area — set playhead
-        tlPlayhead=getTime(e);
-        $('tlTime').textContent=fmtTlSec(Math.max(0,tlPlayhead));
-        tlRender();
+        tlPlayhead=Math.max(0,Math.min(tlDuration||0,tlToSec(x,c.width)));
+        const subs=tlGetSubs();
+        tlActiveCue=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+        tlRender(); tlUpdateInfoBar();
       }
     });
+
     c.addEventListener('mousemove',e=>{
-      const rect=c.getBoundingClientRect();
-      const x=(e.clientX-rect.left)*(c.width/rect.width);
-      const y=(e.clientY-rect.top)*(c.height/rect.height);
-      const hit=tlHit(x,y);
-      if(hit){
-        c.style.cursor=hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize');
-        // show time tooltip
-        const t=tlView.start+(x/c.width)*Math.max(0.1,tlView.end-tlView.start);
-        $('tlTime').textContent=fmtTlSec(t);
+      const {x,y}=cvsCoord(e,c);
+      if(drag){
+        const dt=tlToSec(x,c.width)-tlToSec(drag.anchorX,c.width);
+        const subs=tlGetSubs(), s=subs[drag.idx]; if(!s) return;
+        const SNAP=$('tlSnap')?.checked, SV=0.04, minDur=0.05;
+        const snap=v=>SNAP?Math.round(v/SV)*SV:v;
+        if(drag.type==='move'){
+          const dur=drag.origEnd-drag.origStart;
+          const ns=snap(Math.max(0,drag.origStart+dt));
+          s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
+        } else if(drag.type==='left'){
+          s.start=secToSrt(Math.max(0,snap(Math.min(drag.origEnd-minDur,drag.origStart+dt))));
+        } else {
+          s.end=secToSrt(snap(Math.max(drag.origStart+minDur,drag.origEnd+dt)));
+        }
+        tlRender(); tlUpdateInfoBar(); renderCurrentView();
       } else {
-        c.style.cursor='crosshair';
-        const t=tlView.start+(x/c.width)*Math.max(0.1,tlView.end-tlView.start);
-        $('tlTime').textContent=fmtTlSec(t);
+        const hit=tlHit(x,y,c.width,c.height);
+        c.style.cursor=hit?(hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize')):'crosshair';
       }
     });
+
+    document.addEventListener('mouseup',()=>{ if(!drag) return; drag=null; saveStateLocally(); });
+
     c.addEventListener('wheel',e=>{
       e.preventDefault();
-      const rect=c.getBoundingClientRect();
-      const mx=(e.clientX-rect.left)*(c.width/rect.width);
-      const pivot=tlView.start+(mx/c.width)*Math.max(0.1,tlView.end-tlView.start);
-      const factor=e.deltaY>0?1.15:0.87;
-      const newDur=Math.min(tlDuration||60,(tlView.end-tlView.start)*factor);
-      const ratio=mx/c.width;
-      let ns=pivot-ratio*newDur, ne=ns+newDur;
-      const maxEnd=tlDuration||60;
-      if(ns<0){ne=Math.min(maxEnd,ne-ns);ns=0;}
-      if(ne>maxEnd){ns=Math.max(0,ns-(ne-maxEnd));ne=maxEnd;}
-      tlView={start:ns,end:ne};
-      tlRender();
+      tlSetZoom(Math.max(1,tlZoom*(e.deltaY>0?1.15:0.87)));
     },{passive:false});
   }
-  // attach after DOM ready
   document.addEventListener('DOMContentLoaded',attachCanvasEvents);
   setTimeout(attachCanvasEvents,200);
 })();
 
-// Resize handle drag
+// ── Resize handle ──
 (function(){
-  const handle=()=>$('tlHandle');
-  let dragging=false, startY=0, startH=0;
+  let drag=false, startY=0, startH=0;
   document.addEventListener('mousedown',e=>{
-    const h=handle(); if(!h||e.target!==h) return;
-    dragging=true; startY=e.clientY;
-    const panel=$('tlPanel');
-    startH=panel.offsetHeight;
-    h.classList.add('active');
-    e.preventDefault();
+    const h=$('tlHandle'); if(!h||e.target!==h) return;
+    drag=true; startY=e.clientY; startH=$('tlPanel').offsetHeight;
+    h.classList.add('active'); e.preventDefault();
   });
   document.addEventListener('mousemove',e=>{
-    if(!dragging) return;
-    const dy=startY-e.clientY; // dragging up = increase height
-    const panel=$('tlPanel');
-    const newH=Math.max(60,Math.min(window.innerHeight*0.65,startH+dy));
-    panel.style.height=newH+'px';
-    panel.style.transition='none';
-    tlRender();
+    if(!drag) return;
+    const p=$('tlPanel');
+    p.style.height=Math.max(90,Math.min(window.innerHeight*0.65,startH+(startY-e.clientY)))+'px';
+    p.style.transition='none'; tlRender();
   });
   document.addEventListener('mouseup',()=>{
-    if(!dragging) return;
-    dragging=false;
-    const h=handle(); if(h) h.classList.remove('active');
-    const panel=$('tlPanel'); if(panel) panel.style.transition='';
+    if(!drag) return; drag=false;
+    const h=$('tlHandle'); if(h) h.classList.remove('active');
+    const p=$('tlPanel'); if(p) p.style.transition='';
     tlIsCollapsed=false; tlIsMax=false;
   });
 })();
 
 function tlToggle(){
-  const panel=$('tlPanel');
-  if(!panel) return;
+  const p=$('tlPanel'); if(!p) return;
   tlIsCollapsed=!tlIsCollapsed;
-  panel.classList.toggle('tl-collapsed',tlIsCollapsed);
-  if(tlIsMax&&tlIsCollapsed){ panel.classList.remove('tl-max'); tlIsMax=false; }
+  p.classList.toggle('tl-collapsed',tlIsCollapsed);
+  if(tlIsMax&&tlIsCollapsed){p.classList.remove('tl-max');tlIsMax=false;}
   $('tlToggleBtn').style.transform=tlIsCollapsed?'rotate(-90deg)':'';
   if(!tlIsCollapsed) setTimeout(tlRender,200);
 }
 
 function tlMaximize(){
-  const panel=$('tlPanel');
-  if(!panel) return;
+  const p=$('tlPanel'); if(!p) return;
   tlIsMax=!tlIsMax;
-  panel.classList.toggle('tl-max',tlIsMax);
-  if(tlIsCollapsed&&tlIsMax){ panel.classList.remove('tl-collapsed'); tlIsCollapsed=false; $('tlToggleBtn').style.transform=''; }
+  p.classList.toggle('tl-max',tlIsMax);
+  if(tlIsCollapsed&&tlIsMax){p.classList.remove('tl-collapsed');tlIsCollapsed=false;$('tlToggleBtn').style.transform='';}
   $('tlMaxBtn').textContent=tlIsMax?'⤡':'⤢';
   setTimeout(tlRender,220);
 }
 
-// Re-render timeline when window resizes
 window.addEventListener('resize',()=>{ if(!tlIsCollapsed) tlRender(); });
 
 // ══════════════════════════════════════════════════════════════
@@ -2650,6 +2760,7 @@ rebuildTabs();
 updateHeaderLangs();
 updateHeaderMeta();
 if (!loadStateLocally()) renderCurrentView();
+tlRebuildLangPills();
 checkAuth();
 </script>
 </body>
