@@ -988,8 +988,10 @@ const PROVIDERS = {
     hint:'Get key: aistudio.google.com — No credit card needed',
     validate: v => v.startsWith('AIza') && v.length > 20,
     models:[
-      {id:'gemini-2.5-flash-lite', name:'Gemini 2.5 Flash-Lite  ·  15 RPM / 1K/day'},
-      {id:'gemini-2.5-flash',      name:'Gemini 2.5 Flash       ·  10 RPM / 250/day'},
+      {id:'gemini-2.5-flash-lite-preview-04-17', name:'Gemini 2.5 Flash Lite  ·  10 RPM / 20/day (free)'},
+      {id:'gemini-2.5-flash-preview-04-17',      name:'Gemini 2.5 Flash       ·   5 RPM / 20/day (free)'},
+      {id:'gemini-2.0-flash',                    name:'Gemini 2.0 Flash       ·  15 RPM / 1.5K/day (free)'},
+      {id:'gemini-1.5-flash',                    name:'Gemini 1.5 Flash       ·  15 RPM / 1.5K/day (free)'},
     ]
   },
   groq: {
@@ -1031,7 +1033,8 @@ const PROVIDERS = {
 
 function updateProviderTiming() {
   window._providerBatch = activeProvider==='mistral'?10:30;
-  window._providerPause = activeProvider==='mistral'?65000:activeProvider==='gemini'?10000:5000;
+  // Gemini free tier: ~5–10 RPM depending on model → 12 s gap keeps us safely under 5 RPM
+  window._providerPause = activeProvider==='mistral'?65000:activeProvider==='gemini'?12000:5000;
 }
 // Init provider from settings
 activeProvider = settings.translationProvider;
