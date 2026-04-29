@@ -1813,6 +1813,12 @@ async function startTranscription() {
 
     setXcStatus('Sending to ElevenLabs Scribe…'); $('xcProgressFill').style.width='60%';
     const lang=$('xcSourceLang').value;
+
+    // Fetch key then upload directly to ElevenLabs — avoids Vercel's 4.5 MB proxy limit
+    const keyResp=await fetch('/api/el-key');
+    if(!keyResp.ok) throw new Error('Could not load transcription key');
+    const {key:elKey}=await keyResp.json();
+
     const fd=new FormData();
     fd.append('file',audioBlob,xcFile.name.replace(/\.[^.]+$/,'.mp3'));
     fd.append('model_id',settings.elModel||'scribe_v1');
@@ -1820,7 +1826,11 @@ async function startTranscription() {
     fd.append('tag_audio_events','false');
     if(lang!=='auto') fd.append('language_code',lang);
 
-    const resp=await fetch('/api/transcribe',{method:'POST',body:fd});
+    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{
+      method:'POST',
+      headers:{'xi-api-key':elKey},
+      body:fd,
+    });
     $('xcProgressFill').style.width='85%';
     if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
     const data=await resp.json(); $('xcProgressFill').style.width='100%';
