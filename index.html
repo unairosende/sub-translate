@@ -340,6 +340,18 @@ input[type=file]{display:none}
 .split-btn{display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 6px;border-radius:5px;font:500 10.5px/1 var(--sans);cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink-3);white-space:nowrap;transition:all .12s}
 .split-btn:hover{background:var(--line-2);color:var(--ink-2)}
 
+/* ── Timeline panel ── */
+.tl-panel{height:180px;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:height .18s ease}
+.tl-panel.tl-collapsed{height:34px}
+.tl-panel.tl-max{height:50vh}
+.tl-handle{height:4px;cursor:ns-resize;flex-shrink:0;background:transparent;transition:background .12s}
+.tl-handle:hover,.tl-handle.active{background:var(--accent-soft)}
+.tl-bar{height:34px;padding:0 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;border-bottom:1px solid var(--line-2);background:var(--panel)}
+.tl-time{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;min-width:52px;white-space:nowrap}
+.tl-audio-label{font-size:11px;color:var(--ink-3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-canvas-wrap{flex:1;overflow:hidden;position:relative;background:var(--bg)}
+#tlCanvas{display:block;position:absolute;top:0;left:0}
+
 /* ── Command palette ── */
 .cmd-overlay{position:fixed;inset:0;background:rgba(22,20,15,.2);backdrop-filter:blur(4px);display:flex;justify-content:center;padding-top:80px;z-index:2000}
 .cmd-box{width:540px;max-height:calc(100vh - 120px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(22,20,15,.16)}
@@ -795,6 +807,23 @@ input[type=file]{display:none}
 
   <!-- ── Editor area ── -->
   <div class="editor-area" id="editorArea"></div>
+
+  <!-- ── Timeline panel ── -->
+  <div class="tl-panel" id="tlPanel">
+    <div class="tl-handle" id="tlHandle" title="Drag to resize"></div>
+    <div class="tl-bar">
+      <span class="tl-time" id="tlTime">—</span>
+      <span class="tl-audio-label" id="tlAudioLabel" title=""></span>
+      <div style="flex:1"></div>
+      <input type="file" id="tlAudioInput" accept="audio/*,video/*" style="display:none" onchange="tlLoadFile(this.files[0])">
+      <button class="btn" style="font-size:11px;padding:3px 9px;height:26px" onclick="$('tlAudioInput').click()">Load audio</button>
+      <button class="btn btn-ghost" id="tlToggleBtn" onclick="tlToggle()" title="Hide / show timeline" style="font-size:13px;padding:3px 7px;height:26px;line-height:1">⌄</button>
+      <button class="btn btn-ghost" id="tlMaxBtn" onclick="tlMaximize()" title="Expand timeline" style="font-size:13px;padding:3px 7px;height:26px;line-height:1">⤢</button>
+    </div>
+    <div class="tl-canvas-wrap" id="tlCanvasWrap">
+      <canvas id="tlCanvas"></canvas>
+    </div>
+  </div>
 
   <!-- ── Status bar ── -->
   <div class="status-bar">
@@ -1332,6 +1361,8 @@ function renderCurrentView() {
   } else {
     renderListView(area,activeSubs,!!subtitles.length);
   }
+  // Re-draw timeline blocks whenever subtitles change
+  if(!tlIsCollapsed) requestAnimationFrame(tlRender);
 }
 
 function renderListView(container,subs,editable) {
@@ -1888,6 +1919,7 @@ async function startTranscription() {
     subtitles=subs; translations={}; backTranslations={}; activeTab='source';
     $('translateBtn').disabled=false; $('clearBtn').disabled=false; $('exportBtn').disabled=false;
     updateExportAllBtn(); rebuildTabs(); renderCurrentView();
+    tlAutoLoad(xcFile);
     setXcStatus(subs.length+' subtitles transcribed ✓','ok');
     switchImportTab('import');
   } catch(e) { setXcStatus('Error: '+e.message,'err'); $('xcProgressFill').style.width='0%'; }
@@ -2027,6 +2059,7 @@ async function startAlignment() {
     const nameEl=$('projectName');
     if(nameEl&&alignAudioFile.name){const base=alignAudioFile.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');if(base)nameEl.value=base;}
     afterLoad();
+    tlAutoLoad(alignAudioFile);
     setAlignStatus(subs.length+' subtitles aligned ✓','ok');
     setStatus(subs.length+' subtitles aligned','ok');
     switchImportTab('import');
@@ -2266,6 +2299,349 @@ function loadStateLocally() {
   } catch(e) {}
   return false;
 }
+
+// ══════════════════════════════════════════════════════════════
+//  TIMELINE
+// ══════════════════════════════════════════════════════════════
+let tlAudioBuf=null, tlPeaks=[], tlDuration=0;
+let tlView={start:0, end:0};          // visible time range (seconds)
+let tlPlayhead=-1;                    // current playhead sec (-1 = hidden)
+let tlDragging=null;                  // {type:'move'|'left'|'right', idx, origStart, origEnd, anchorX, anchorTime}
+let tlIsMax=false, tlIsCollapsed=false;
+let tlAnimId=null;
+const TL_WAVEFORM_COLOR='#c5c2bb';
+const TL_SUB_COLOR='rgba(220,100,70,0.22)';
+const TL_SUB_BORDER='rgba(220,100,70,0.72)';
+const TL_SUB_ACTIVE='rgba(220,100,70,0.42)';
+const TL_RULER_COLOR='#aaa9a2';
+const TL_PLAYHEAD_COLOR='oklch(0.66 0.16 28)';
+
+function fmtTlSec(s){
+  const m=Math.floor(s/60), sec=(s%60).toFixed(1).padStart(4,'0');
+  return m+':'+sec;
+}
+
+function tlSrtToSec(srt){
+  if(!srt) return 0;
+  const m=srt.match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+  if(!m) return 0;
+  return +m[1]*3600 + +m[2]*60 + +m[3] + +m[4]/1000;
+}
+
+async function tlLoadFile(file){
+  if(!file) return;
+  $('tlAudioLabel').textContent=file.name;
+  $('tlAudioLabel').title=file.name;
+  $('tlTime').textContent='Loading…';
+  try {
+    const isVideo=file.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(file.name);
+    let blob=file;
+    if(isVideo){ try{ blob=await extractAudioFromVideo(file); }catch(e){ /* fallback raw */ } }
+    const ab=await blob.arrayBuffer();
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const buf=await ctx.decodeAudioData(ab);
+    await ctx.close();
+    tlAudioBuf=buf; tlDuration=buf.duration;
+    // Downsample to ~2000 peaks
+    const ch=buf.getChannelData(0);
+    const n=2000, step=Math.floor(ch.length/n);
+    tlPeaks=[];
+    for(let i=0;i<n;i++){
+      let max=0;
+      for(let j=0;j<step;j++){ const v=Math.abs(ch[i*step+j]||0); if(v>max) max=v; }
+      tlPeaks.push(max);
+    }
+    // normalise
+    const peak=Math.max(...tlPeaks,0.001);
+    tlPeaks=tlPeaks.map(v=>v/peak);
+    tlView={start:0, end:tlDuration};
+    tlRender();
+    $('tlTime').textContent=fmtTlSec(0);
+    // un-collapse if collapsed
+    if(tlIsCollapsed){ tlIsCollapsed=false; $('tlPanel').classList.remove('tl-collapsed'); $('tlToggleBtn').style.transform=''; }
+  } catch(e){
+    $('tlAudioLabel').textContent='Error loading audio';
+    console.warn('TL load error',e);
+  }
+}
+
+function tlAutoLoad(file){
+  // Called automatically after transcription/alignment
+  if(file) tlLoadFile(file);
+}
+
+function tlRender(){
+  const canvas=$('tlCanvas');
+  const wrap=$('tlCanvasWrap');
+  if(!wrap||!canvas) return;
+  const W=wrap.clientWidth||wrap.offsetWidth||800;
+  const H=wrap.clientHeight||wrap.offsetHeight||130;
+  if(W<10||H<10) return;
+  if(canvas.width!==W) canvas.width=W;
+  if(canvas.height!==H) canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const vStart=tlView.start, vEnd=tlView.end, vDur=Math.max(0.1,vEnd-vStart);
+  const toPx=t=>((t-vStart)/vDur)*W;
+  const toSec=x=>vStart+(x/W)*vDur;
+
+  // Background
+  ctx.fillStyle='#f8f7f3'; ctx.fillRect(0,0,W,H);
+
+  // Ruler
+  const RULER_H=16;
+  ctx.fillStyle='#f0efe9'; ctx.fillRect(0,0,W,RULER_H);
+  const tickSecs=niceTick(vDur, W/80);
+  const firstTick=Math.ceil(vStart/tickSecs)*tickSecs;
+  ctx.fillStyle=TL_RULER_COLOR; ctx.font='9px system-ui,sans-serif'; ctx.textBaseline='middle';
+  for(let t=firstTick;t<=vEnd+tickSecs*0.01;t+=tickSecs){
+    const x=Math.round(toPx(t));
+    ctx.fillStyle=TL_RULER_COLOR;
+    ctx.fillRect(x,RULER_H-5,1,5);
+    ctx.fillStyle='#888'; ctx.fillText(fmtTlSec(t),x+3,RULER_H/2+1);
+  }
+
+  // Waveform
+  if(tlPeaks.length){
+    const waveY=RULER_H, waveH=H-RULER_H;
+    const mid=waveY+waveH/2;
+    const amp=(waveH/2)*0.85;
+    ctx.fillStyle=TL_WAVEFORM_COLOR;
+    for(let px=0;px<W;px++){
+      const t0=vStart+(px/W)*vDur;
+      const t1=vStart+((px+1)/W)*vDur;
+      const i0=Math.floor((t0/tlDuration)*tlPeaks.length);
+      const i1=Math.ceil((t1/tlDuration)*tlPeaks.length);
+      let peak=0;
+      for(let i=Math.max(0,i0);i<Math.min(tlPeaks.length,i1+1);i++) if(tlPeaks[i]>peak) peak=tlPeaks[i];
+      const h=Math.max(1,peak*amp);
+      ctx.fillRect(px,mid-h,1,h*2);
+    }
+  }
+
+  // Subtitle blocks
+  const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+  subs.forEach((s,i)=>{
+    const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
+    if(s1<vStart||s0>vEnd) return;
+    const x0=Math.max(0,toPx(s0)), x1=Math.min(W,toPx(s1));
+    const bW=x1-x0; if(bW<1) return;
+    const bH=H-RULER_H-2, bY=RULER_H+1;
+    ctx.fillStyle=TL_SUB_COLOR; ctx.fillRect(x0,bY,bW,bH);
+    ctx.strokeStyle=TL_SUB_BORDER; ctx.lineWidth=1; ctx.strokeRect(x0+0.5,bY+0.5,bW-1,bH-1);
+    // resize handles
+    ctx.fillStyle=TL_SUB_BORDER;
+    ctx.fillRect(x0,bY,3,bH);
+    ctx.fillRect(x1-3,bY,3,bH);
+    // label
+    if(bW>20){
+      ctx.fillStyle='rgba(80,30,10,0.7)';
+      ctx.font='9.5px system-ui,sans-serif'; ctx.textBaseline='top';
+      const lbl='#'+s.index;
+      ctx.fillText(lbl,x0+5,bY+3);
+    }
+  });
+
+  // Playhead
+  if(tlPlayhead>=0&&tlPlayhead>=vStart&&tlPlayhead<=vEnd){
+    const px=toPx(tlPlayhead);
+    ctx.strokeStyle=TL_PLAYHEAD_COLOR; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+  }
+}
+
+function niceTick(range, minPx) {
+  const candidates=[0.1,0.25,0.5,1,2,5,10,15,30,60,120,300,600];
+  for(const c of candidates) if(range/c<=minPx) return c;
+  return 600;
+}
+
+function tlHit(x, y){
+  // Returns {type:'move'|'left'|'right', subIndex} or null
+  const canvas=$('tlCanvas');
+  const W=canvas.width, H=canvas.height;
+  const RULER_H=16;
+  if(y<RULER_H) return null;
+  const vDur=Math.max(0.1,tlView.end-tlView.start);
+  const toSec=x=>tlView.start+(x/W)*vDur;
+  const toPx=t=>((t-tlView.start)/vDur)*W;
+  const t=toSec(x);
+  const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+  // Check resize handles first (higher priority), iterate reversed for top-most
+  for(let i=subs.length-1;i>=0;i--){
+    const s=subs[i];
+    const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
+    const x0=toPx(s0), x1=toPx(s1);
+    const HANDLE=5;
+    if(x>=x0-HANDLE&&x<=x0+HANDLE&&y>=RULER_H) return {type:'left', idx:i};
+    if(x>=x1-HANDLE&&x<=x1+HANDLE&&y>=RULER_H) return {type:'right', idx:i};
+    if(x>=x0&&x<=x1&&y>=RULER_H) return {type:'move', idx:i};
+  }
+  return null;
+}
+
+// Mouse events on canvas
+(function(){
+  const canvas=()=>$('tlCanvas');
+  let dragging=null;
+
+  function getTime(e){
+    const c=canvas(); if(!c) return 0;
+    const rect=c.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(c.width/rect.width);
+    const vDur=Math.max(0.1,tlView.end-tlView.start);
+    return tlView.start+(x/c.width)*vDur;
+  }
+  function getPx(e){
+    const c=canvas(); if(!c) return 0;
+    const rect=c.getBoundingClientRect();
+    return (e.clientX-rect.left)*(c.width/rect.width);
+  }
+
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const nowT=getTime(e);
+    const dt=nowT-dragging.anchorTime;
+    const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+    const s=subs[dragging.idx]; if(!s) return;
+    const minDur=0.05;
+    if(dragging.type==='move'){
+      const dur=tlSrtToSec(dragging.origEnd)-tlSrtToSec(dragging.origStart);
+      let ns=Math.max(0,dragging.origStart+dt);
+      s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
+    } else if(dragging.type==='left'){
+      let ns=Math.min(dragging.origEnd-minDur, dragging.origStart+dt);
+      ns=Math.max(0,ns);
+      s.start=secToSrt(ns);
+    } else if(dragging.type==='right'){
+      let ne=Math.max(dragging.origStart+minDur, dragging.origEnd+dt);
+      s.end=secToSrt(ne);
+    }
+    tlRender(); renderCurrentView();
+  });
+
+  document.addEventListener('mouseup',e=>{
+    if(!dragging) return;
+    dragging=null;
+    saveStateLocally();
+  });
+
+  function attachCanvasEvents(){
+    const c=$('tlCanvas'); if(!c||c._tlEventsAttached) return;
+    c._tlEventsAttached=true;
+    c.addEventListener('mousedown',e=>{
+      const c=canvas(); if(!c) return;
+      const rect=c.getBoundingClientRect();
+      const x=(e.clientX-rect.left)*(c.width/rect.width);
+      const y=(e.clientY-rect.top)*(c.height/rect.height);
+      const hit=tlHit(x,y);
+      if(hit){
+        pushUndo();
+        const subs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+        const s=subs[hit.idx]; if(!s) return;
+        dragging={
+          type:hit.type, idx:hit.idx,
+          origStart:tlSrtToSec(s.start), origEnd:tlSrtToSec(s.end),
+          anchorTime:getTime(e),
+        };
+        e.preventDefault();
+      } else {
+        // Click on ruler or empty area — set playhead
+        tlPlayhead=getTime(e);
+        $('tlTime').textContent=fmtTlSec(Math.max(0,tlPlayhead));
+        tlRender();
+      }
+    });
+    c.addEventListener('mousemove',e=>{
+      const rect=c.getBoundingClientRect();
+      const x=(e.clientX-rect.left)*(c.width/rect.width);
+      const y=(e.clientY-rect.top)*(c.height/rect.height);
+      const hit=tlHit(x,y);
+      if(hit){
+        c.style.cursor=hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize');
+        // show time tooltip
+        const t=tlView.start+(x/c.width)*Math.max(0.1,tlView.end-tlView.start);
+        $('tlTime').textContent=fmtTlSec(t);
+      } else {
+        c.style.cursor='crosshair';
+        const t=tlView.start+(x/c.width)*Math.max(0.1,tlView.end-tlView.start);
+        $('tlTime').textContent=fmtTlSec(t);
+      }
+    });
+    c.addEventListener('wheel',e=>{
+      e.preventDefault();
+      const rect=c.getBoundingClientRect();
+      const mx=(e.clientX-rect.left)*(c.width/rect.width);
+      const pivot=tlView.start+(mx/c.width)*Math.max(0.1,tlView.end-tlView.start);
+      const factor=e.deltaY>0?1.15:0.87;
+      const newDur=Math.min(tlDuration||60,(tlView.end-tlView.start)*factor);
+      const ratio=mx/c.width;
+      let ns=pivot-ratio*newDur, ne=ns+newDur;
+      const maxEnd=tlDuration||60;
+      if(ns<0){ne=Math.min(maxEnd,ne-ns);ns=0;}
+      if(ne>maxEnd){ns=Math.max(0,ns-(ne-maxEnd));ne=maxEnd;}
+      tlView={start:ns,end:ne};
+      tlRender();
+    },{passive:false});
+  }
+  // attach after DOM ready
+  document.addEventListener('DOMContentLoaded',attachCanvasEvents);
+  setTimeout(attachCanvasEvents,200);
+})();
+
+// Resize handle drag
+(function(){
+  const handle=()=>$('tlHandle');
+  let dragging=false, startY=0, startH=0;
+  document.addEventListener('mousedown',e=>{
+    const h=handle(); if(!h||e.target!==h) return;
+    dragging=true; startY=e.clientY;
+    const panel=$('tlPanel');
+    startH=panel.offsetHeight;
+    h.classList.add('active');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const dy=startY-e.clientY; // dragging up = increase height
+    const panel=$('tlPanel');
+    const newH=Math.max(60,Math.min(window.innerHeight*0.65,startH+dy));
+    panel.style.height=newH+'px';
+    panel.style.transition='none';
+    tlRender();
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging=false;
+    const h=handle(); if(h) h.classList.remove('active');
+    const panel=$('tlPanel'); if(panel) panel.style.transition='';
+    tlIsCollapsed=false; tlIsMax=false;
+  });
+})();
+
+function tlToggle(){
+  const panel=$('tlPanel');
+  if(!panel) return;
+  tlIsCollapsed=!tlIsCollapsed;
+  panel.classList.toggle('tl-collapsed',tlIsCollapsed);
+  if(tlIsMax&&tlIsCollapsed){ panel.classList.remove('tl-max'); tlIsMax=false; }
+  $('tlToggleBtn').style.transform=tlIsCollapsed?'rotate(-90deg)':'';
+  if(!tlIsCollapsed) setTimeout(tlRender,200);
+}
+
+function tlMaximize(){
+  const panel=$('tlPanel');
+  if(!panel) return;
+  tlIsMax=!tlIsMax;
+  panel.classList.toggle('tl-max',tlIsMax);
+  if(tlIsCollapsed&&tlIsMax){ panel.classList.remove('tl-collapsed'); tlIsCollapsed=false; $('tlToggleBtn').style.transform=''; }
+  $('tlMaxBtn').textContent=tlIsMax?'⤡':'⤢';
+  setTimeout(tlRender,220);
+}
+
+// Re-render timeline when window resizes
+window.addEventListener('resize',()=>{ if(!tlIsCollapsed) tlRender(); });
 
 // ══════════════════════════════════════════════════════════════
 //  INIT
