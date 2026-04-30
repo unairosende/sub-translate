@@ -640,8 +640,8 @@ input[type=file]{display:none}
 
     <!-- Align panel -->
     <div id="panel-align" style="display:none">
-      <div class="s-title">Transcript text</div>
-      <textarea class="paste-area" id="alignText" placeholder="Paste the clean transcript here. The audio timecodes will be mapped to this text." rows="5" style="margin-bottom:8px"></textarea>
+      <div class="s-title">Transcript text <span style="font-weight:400;color:var(--ink-3);font-size:10px">· any language, including different from audio</span></div>
+      <textarea class="paste-area" id="alignText" placeholder="Paste the clean transcript here. Works even if the text is in a different language than the audio — timecodes are mapped proportionally." rows="5" style="margin-bottom:8px"></textarea>
       <div class="s-title">Audio / video file</div>
       <input type="file" id="alignAudioInput" accept="audio/*,video/*,.mp3,.mp4,.wav,.m4a,.mov,.mkv,.aac,.ogg,.flac,.webm">
       <div class="xc-drop" id="alignDrop">
@@ -1006,7 +1006,7 @@ let settings = {
   maxLinesPerSub:      2,
   elModel:            'scribe_v1',
   translationProvider:    'gemini',
-  translationModel:       'gemini-2.5-flash-lite',
+  translationModel:       'gemini-2.5-flash-preview-04-17',
 };
 
 // ── App state ──────────────────────────────────────────────
@@ -1090,10 +1090,10 @@ const PROVIDERS = {
     hint:'Get key: aistudio.google.com — No credit card needed',
     validate: v => v.startsWith('AIza') && v.length > 20,
     models:[
-      {id:'gemini-2.5-flash-lite-preview-04-17', name:'Gemini 2.5 Flash Lite  ·  10 RPM / 20/day (free)'},
-      {id:'gemini-2.5-flash-preview-04-17',      name:'Gemini 2.5 Flash       ·   5 RPM / 20/day (free)'},
-      {id:'gemini-2.0-flash',                    name:'Gemini 2.0 Flash       ·  15 RPM / 1.5K/day (free)'},
-      {id:'gemini-2.0-flash-lite',               name:'Gemini 2.0 Flash Lite  ·  30 RPM / 1.5K/day (free)'},
+      {id:'gemini-2.5-flash-preview-04-17',      name:'Gemini 2.5 Flash       ·  1K RPM (paid)'},
+      {id:'gemini-2.5-flash-lite-preview-04-17', name:'Gemini 2.5 Flash Lite  ·  4K RPM (paid)'},
+      {id:'gemini-2.0-flash',                    name:'Gemini 2.0 Flash       ·  2K RPM (paid)'},
+      {id:'gemini-2.0-flash-lite',               name:'Gemini 2.0 Flash Lite  ·  4K RPM (paid)'},
     ]
   },
   groq: {
@@ -1975,6 +1975,28 @@ async function startTranscription() {
 }
 
 // ── Group ElevenLabs word tokens → subtitle segments ─────────
+// ── Enforce minimum gap between consecutive subtitles ────────
+// 4 frames at 25 fps = 160 ms; never allow subtitles to touch or overlap.
+const SUB_MIN_GAP = 0.160; // seconds
+
+function ensureGaps(subs, minGap = SUB_MIN_GAP) {
+  if (subs.length < 2) return subs;
+  // Sort by start time (in case they arrive out of order)
+  subs.sort((a, b) => tlSrtToSec(a.start) - tlSrtToSec(b.start));
+  for (let i = 0; i < subs.length - 1; i++) {
+    const cur  = subs[i];
+    const next = subs[i + 1];
+    const curEnd   = tlSrtToSec(cur.end);
+    const nextStart = tlSrtToSec(next.start);
+    if (curEnd + minGap > nextStart) {
+      // Clamp current end so gap is preserved; never make it shorter than 100 ms
+      const safeEnd = Math.max(tlSrtToSec(cur.start) + 0.1, nextStart - minGap);
+      cur.end = secToSrt(safeEnd);
+    }
+  }
+  return subs;
+}
+
 function wordsToSubs(words) {
   const MAX_DUR=5.5, MAX_CHARS=120, MIN_GAP=0.45;
   const subs=[]; let group=[],gStart=null;
@@ -1999,7 +2021,7 @@ function wordsToSubs(words) {
     if(sentEnd||duration>=MAX_DUR||curText.length>=MAX_CHARS||gap>=MIN_GAP) flush(w.end??gStart+1);
   });
   if(group.length) flush(group[group.length-1].end??gStart+1);
-  return subs;
+  return ensureGaps(subs);
 }
 
 // ── Audio extraction from video ──────────────────────────────
@@ -2090,8 +2112,7 @@ async function startAlignment() {
     fd.append('model_id',settings.elModel||'scribe_v1');
     fd.append('timestamps_granularity','word');
     fd.append('tag_audio_events','false');
-    const xcLang=$('xcSourceLang')?.value;
-    if(xcLang&&xcLang!=='auto') fd.append('language_code',xcLang);
+    // No language_code — auto-detect so text and audio can be in different languages
     const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':elKey},body:fd});
     if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
     const data=await resp.json();
@@ -2125,7 +2146,7 @@ function alignTextToWords(text, words) {
   const totalWords=words.length;
   const cleanWordCount=Math.max(1,text.split(/\s+/).filter(Boolean).length);
   let wordPos=0;
-  return chunks.map((chunkText,i)=>{
+  const raw=chunks.map((chunkText,i)=>{
     const chunkWc=chunkText.split(/\s+/).filter(Boolean).length;
     const si=Math.min(Math.round(wordPos/cleanWordCount*totalWords),totalWords-1);
     const ei=Math.min(Math.round((wordPos+chunkWc)/cleanWordCount*totalWords),totalWords-1);
@@ -2134,6 +2155,7 @@ function alignTextToWords(text, words) {
     wordPos+=chunkWc;
     return {index:i+1,start:secToSrt(startSec),end:secToSrt(endSec),text:chunkText};
   });
+  return ensureGaps(raw);
 }
 
 function chunkTextToSubs(text,maxChars,maxLines) {
@@ -2682,16 +2704,23 @@ function tlHit(x,y,W,H){
       if(drag){
         const dt=tlToSec(x,c.width)-tlToSec(drag.anchorX,c.width);
         const subs=tlGetSubs(), s=subs[drag.idx]; if(!s) return;
-        const SNAP=$('tlSnap')?.checked, SV=0.04, minDur=0.05;
+        const SNAP=$('tlSnap')?.checked, SV=0.04, minDur=0.1;
         const snap=v=>SNAP?Math.round(v/SV)*SV:v;
+        const prevEnd =drag.idx>0?tlSrtToSec(subs[drag.idx-1].end):-Infinity;
+        const nextStart=drag.idx<subs.length-1?tlSrtToSec(subs[drag.idx+1].start):Infinity;
         if(drag.type==='move'){
           const dur=drag.origEnd-drag.origStart;
-          const ns=snap(Math.max(0,drag.origStart+dt));
+          let ns=snap(Math.max(prevEnd+SUB_MIN_GAP,drag.origStart+dt));
+          // clamp so end doesn't collide with next sub
+          if(ns+dur+SUB_MIN_GAP>nextStart) ns=nextStart-SUB_MIN_GAP-dur;
+          ns=Math.max(0,ns);
           s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
         } else if(drag.type==='left'){
-          s.start=secToSrt(Math.max(0,snap(Math.min(drag.origEnd-minDur,drag.origStart+dt))));
+          const minStart=Math.max(0,prevEnd+SUB_MIN_GAP);
+          s.start=secToSrt(snap(Math.max(minStart,Math.min(drag.origEnd-minDur,drag.origStart+dt))));
         } else {
-          s.end=secToSrt(snap(Math.max(drag.origStart+minDur,drag.origEnd+dt)));
+          const maxEnd=nextStart-SUB_MIN_GAP;
+          s.end=secToSrt(snap(Math.min(maxEnd,Math.max(drag.origStart+minDur,drag.origEnd+dt))));
         }
         tlRender(); tlUpdateInfoBar(); renderCurrentView();
       } else {
