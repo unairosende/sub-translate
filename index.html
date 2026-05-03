@@ -1709,7 +1709,16 @@ async function startTranslation() {
     try{
       const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
-      batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
+      batch.forEach((s,j)=>{
+        let txt=parsed[j]!==undefined?parsed[j]:s.text;
+        // Sanitize: strip \r, cap to maxLinesPerSub lines
+        if(typeof txt==='string'){
+          txt=txt.replace(/\r/g,'');
+          const ls=txt.split('\n');
+          if(ls.length>settings.maxLinesPerSub) txt=reflowText(ls.join(' '),maxLen());
+        }
+        result.push({...s,text:txt});
+      });
       const done=Math.min(i+BATCH,snap.length);
       setStatus(`Translating… ${done} / ${snap.length}`);
       showProgress(Math.round(done/snap.length*100));
@@ -1734,7 +1743,8 @@ const NATURAL_BREAK_BEFORE=/^(and|but|or|so|yet|nor|for|because|although|while|w
 const PUNCT_AFTER_WORD=/[,;:!?\-—]$/;
 
 function reflowText(text,limit) {
-  const flat=text.replace(/\n/g,' ').replace(/  +/g,' ').trim();
+  const flat=text.replace(/\r?\n|\r/g,' ').replace(/  +/g,' ').trim();
+  // If entire text fits on one line, collapse to single line
   if(flat.length<=limit) return flat;
   const words=flat.split(' ');
   if(words.length<2) return flat;
@@ -1776,7 +1786,10 @@ function fixOverlength() {
   let fixed=0;
   toFix.forEach(s=>{
     const f=subs.find(x=>x.index===s.index); if(!f) return;
-    const r=reflowText(f.text,limit);
+    let r=reflowText(f.text,limit);
+    // Hard cap: never allow more than maxLinesPerSub lines
+    const lines=r.split('\n');
+    if(lines.length>settings.maxLinesPerSub) r=reflowText(lines.join(' '),limit);
     if(r!==f.text){f.text=r;fixed++;}
   });
   setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok');
