@@ -566,7 +566,7 @@ input[type=file]{display:none}
   <!-- ── Import / Transcribe ── -->
   <div class="s-sec">
     <div class="tab-switcher">
-      <button class="tab-sw-btn active" id="sw-import"     onclick="switchImportTab('import')">Import</button>
+      <button class="tab-sw-btn active" id="sw-import"     onclick="switchImportTab('import')">Translate</button>
       <button class="tab-sw-btn"        id="sw-transcribe" onclick="switchImportTab('transcribe')">Transcribe</button>
       <button class="tab-sw-btn"        id="sw-align"      onclick="switchImportTab('align')">Align</button>
     </div>
@@ -579,10 +579,9 @@ input[type=file]{display:none}
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
           Open file
         </button>
-        <button class="btn btn-ghost" id="clearBtn" onclick="clearAll()" title="Clear" style="width:auto;padding:0 10px;color:var(--ink-3)" disabled>
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
-        </button>
       </div>
+      <!-- clearBtn kept hidden for JS compatibility -->
+      <button id="clearBtn" onclick="clearAll()" style="display:none" disabled></button>
       <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
       <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px;width:100%">Parse pasted content</button>
       <div style="margin-top:9px">
@@ -664,7 +663,7 @@ input[type=file]{display:none}
   <!-- ── Source language ── -->
   <div class="s-sec">
     <div class="s-title">Source language</div>
-    <select class="select" id="srcLangSelect">
+    <select class="select" id="srcLangSelect" onchange="onSrcLangChange()">
       <option value="Auto-detect">Auto-detect</option>
       <option value="English">English</option>
       <option value="Spanish">Spanish</option>
@@ -681,7 +680,9 @@ input[type=file]{display:none}
       <option value="Korean">Korean</option>
       <option value="Chinese (Simplified)">Chinese (Simplified)</option>
       <option value="Catalan">Catalan</option>
+      <option value="custom">Custom…</option>
     </select>
+    <input type="text" id="srcLangCustom" class="select" placeholder="Enter language name…" style="display:none;margin-top:5px">
   </div>
 
   <!-- ── Target language ── -->
@@ -1169,6 +1170,19 @@ function getTargetLang() {
   const v=$('langSelect').value; return v==='__custom__'?($('langCustom').value.trim()||''):v;
 }
 function setLang(l) { $('langSelect').value=l; $('langCustom').style.display='none'; syncChips(); }
+function onSrcLangChange() {
+  const v=$('srcLangSelect').value;
+  const inp=$('srcLangCustom');
+  if(inp){ inp.style.display=v==='custom'?'':'none'; if(v==='custom') inp.focus(); }
+  updateHeaderLangs();
+}
+
+function getSrcLang() {
+  const v=$('srcLangSelect')?.value||'Auto-detect';
+  if(v==='custom') return ($('srcLangCustom')?.value.trim()||'Custom');
+  return v;
+}
+
 function onLangSelectChange() {
   const v=$('langSelect').value;
   $('langCustom').style.display=v==='__custom__'?'':'none';
@@ -1202,7 +1216,13 @@ function el(tag,cls){const e=document.createElement(tag);if(cls)e.className=cls;
 function rebuildTabs() {
   const bar=$('langTabsBar'); bar.innerHTML='';
   const src=el('div','ltab src'+(activeTab==='source'?' active':''));
-  src.textContent='Source'; src.onclick=()=>switchToTab('source');
+  src.appendChild(document.createTextNode('Source'));
+  if(subtitles.length){
+    const cx=el('span','ltab-x'); cx.textContent='×'; cx.title='Clear all subtitles';
+    cx.onclick=e=>{e.stopPropagation();clearAll();};
+    src.appendChild(cx);
+  }
+  src.onclick=e=>{if(!e.target.classList.contains('ltab-x'))switchToTab('source');};
   bar.appendChild(src);
   const langs=Object.keys(translations);
   if(langs.length) {
@@ -1571,7 +1591,7 @@ function updatePills(subs) {
   $('warnPill').style.display=warns?'':'none'; $('warnPill').textContent=warns+' warnings';
   $('errPill').style.display =errs ?'':'none'; $('errPill').textContent =errs+' errors';
   const fb=$('fixBtn');
-  if(fb) fb.style.display=(errs>0&&activeTab!=='source')?'flex':'none';
+  if(fb) fb.style.display=errs>0?'flex':'none';
   // Rail cue badge
   const badge=$('railCueBadge');
   if(badge){badge.textContent=n;badge.style.display=n?'flex':'none';}
@@ -1665,7 +1685,7 @@ async function callProvider(prompt,_key,retries=3) {
 async function startTranslation() {
   if(!subtitles.length){setStatus('Import subtitles first','err');return;}
   const lang=getTargetLang(); if(!lang){setStatus('Enter a target language','err');return;}
-  const srcLang=$('srcLangSelect').value;
+  const srcLang=getSrcLang();
   const srcNote=srcLang!=='Auto-detect'?' from '+srcLang:'';
   pushUndo();
   $('translateBtn').disabled=true; $('exportBtn').disabled=true;
@@ -1709,51 +1729,57 @@ async function startTranslation() {
 // ══════════════════════════════════════════════════════════════
 //  FIX OVERLENGTH
 // ══════════════════════════════════════════════════════════════
+// Good break points for subtitle line splitting
+const NATURAL_BREAK_BEFORE=/^(and|but|or|so|yet|nor|for|because|although|while|when|where|which|that|who|however|therefore|thus|then|after|before|since|though|if|as|once|until|unless|whether|although|whereas)$/i;
+const PUNCT_AFTER_WORD=/[,;:!?\-—]$/;
+
 function reflowText(text,limit) {
   const flat=text.replace(/\n/g,' ').replace(/  +/g,' ').trim();
   if(flat.length<=limit) return flat;
-  const words=flat.split(' '); let bestSplit=-1,bestScore=Infinity;
+  const words=flat.split(' ');
+  if(words.length<2) return flat;
+
+  // Pass 1: prefer splits where line1 <= line2 (first line shorter or equal)
+  let bestSplit=-1, bestScore=-Infinity;
   for(let i=1;i<words.length;i++){
-    const l1=words.slice(0,i).join(' '),l2=words.slice(i).join(' ');
+    const l1=words.slice(0,i).join(' '), l2=words.slice(i).join(' ');
     if(l1.length>limit||l2.length>limit) continue;
-    const score=Math.abs(l1.length-l2.length); if(score<bestScore){bestScore=score;bestSplit=i;}
+    if(l1.length>l2.length) continue; // skip if first line longer
+    let score=-(l2.length-l1.length); // closer to equal = higher score
+    if(PUNCT_AFTER_WORD.test(words[i-1])) score+=12; // after punctuation
+    if(NATURAL_BREAK_BEFORE.test(words[i])) score+=8;  // before conjunction
+    if(score>bestScore){bestScore=score;bestSplit=i;}
+  }
+  // Pass 2: fallback — any valid split, balanced
+  if(bestSplit===-1){
+    let fallback=Infinity;
+    for(let i=1;i<words.length;i++){
+      const l1=words.slice(0,i).join(' '), l2=words.slice(i).join(' ');
+      if(l1.length>limit||l2.length>limit) continue;
+      const score=Math.abs(l1.length-l2.length);
+      if(score<fallback){fallback=score;bestSplit=i;}
+    }
   }
   if(bestSplit>0) return words.slice(0,bestSplit).join(' ')+'\n'+words.slice(bestSplit).join(' ');
   const cut=flat.lastIndexOf(' ',limit); if(cut>0) return flat.slice(0,cut)+'\n'+flat.slice(cut+1);
   return flat.slice(0,limit)+'\n'+flat.slice(limit);
 }
 
-async function fixOverlength() {
-  if(activeTab==='source'||!translations[activeTab]) return;
-  const lang=activeTab, subs=translations[lang], limit=maxLen();
-  const allowRephrase=$('allowRephrase')?.checked;
-  const toFix=subs.filter(s=>charStatus(s.text)==='error'); if(!toFix.length) return;
-  const fixBtn=$('fixBtn');
-  const wandIcon=`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5l5 5-8 8H1.5v-5l8-8z"/></svg>`;
-
+function fixOverlength() {
+  // Works on any active tab — source or translation
+  const subs = activeTab==='source' ? subtitles : translations[activeTab];
+  if(!subs?.length){ setStatus('Nothing to fix','err'); return; }
+  const limit=maxLen();
+  const toFix=subs.filter(s=>charStatus(s.text)==='error');
+  if(!toFix.length){ setStatus('No overlength subtitles','ok'); return; }
   pushUndo();
-  if(!allowRephrase){
-    let fixed=0;
-    toFix.forEach(s=>{const f=subs.find(x=>x.index===s.index);if(!f)return;const r=reflowText(f.text,limit);if(r!==f.text){f.text=r;fixed++;}});
-    setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok'); renderCurrentView(); return;
-  }
-  fixBtn.disabled=true; fixBtn.innerHTML='<span class="suggest-spinner"></span> Fixing…';
-  showProgress(0); setStatus(`Fixing ${toFix.length} subtitle${toFix.length>1?'s':''}…`);
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const BATCH=15; let fixed=0;
-  for(let i=0;i<toFix.length;i+=BATCH){
-    if(i>0){for(let c=5;c>0;c--){setStatus(`Fixing… ${i}/${toFix.length} — next in ${c}s…`);await sleep(1000);}}
-    const batch=toFix.slice(i,i+BATCH);
-    const srcTexts=batch.map(s=>subtitles.find(o=>o.index===s.index)?.text||'');
-    const prompt=`You are a professional subtitle editor. Each subtitle in ${lang} is too long (max ${limit} chars/line, max ${settings.maxLinesPerSub} lines). Rephrase slightly to fit — keep exact meaning. Split with \\n. Return ONLY a JSON array.\n\nSource:\n${JSON.stringify(srcTexts)}\n\nTranslations:\n${JSON.stringify(batch.map(s=>s.text))}`;
-    try{
-      const raw=await callProvider(prompt,null,3);
-      let parsed; try{parsed=JSON.parse(raw.replace(/```json[\n]?|```[\n]?/g,'').trim());}catch{parsed=null;}
-      if(Array.isArray(parsed)) batch.forEach((s,j)=>{const txt=parsed[j];if(typeof txt==='string'&&txt.trim()){const f=subs.find(x=>x.index===s.index);if(f){f.text=txt;fixed++;}}});
-    }catch(e){setStatus('Fix error: '+e.message,'err');fixBtn.disabled=false;fixBtn.innerHTML=wandIcon+' Fix';hideProgress();return;}
-    showProgress(Math.round((i+batch.length)/toFix.length*100));
-  }
+  let fixed=0;
+  toFix.forEach(s=>{
+    const f=subs.find(x=>x.index===s.index); if(!f) return;
+    const r=reflowText(f.text,limit);
+    if(r!==f.text){f.text=r;fixed++;}
+  });
   setStatus(`Fixed ${fixed} subtitle${fixed!==1?'s':''}`, 'ok');
-  fixBtn.disabled=false; fixBtn.innerHTML=wandIcon+' Fix'; hideProgress();
   renderCurrentView();
 }
 
@@ -1787,7 +1813,7 @@ function wordDiff(source,backTrans) {
 async function startBackTranslation() {
   const lang=activeTab; if(!translations[lang]) return;
   if(backTranslations[lang]){delete backTranslations[lang];renderCurrentView();return;}
-  const srcLangVal=$('srcLangSelect').value;
+  const srcLangVal=getSrcLang();
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
   showProgress(0); setStatus(`Back-translating to ${srcLang}…`);
@@ -1846,7 +1872,7 @@ function exportAllTranslations() {
   const langs=Object.keys(translations);
   if(!langs.length){setStatus('No translations to export','err');return;}
   const fmt=$('exportAllFormat').value;
-  const srcLangVal=$('srcLangSelect')?.value||'Source';
+  const srcLangVal=getSrcLang();
   const srcLabel=srcLangVal==='Auto-detect'?'Source':srcLangVal;
   const header=['Start Time','End Time',srcLabel,...langs];
   const rows=subtitles.map(src=>{
@@ -1998,13 +2024,17 @@ function ensureGaps(subs, minGap = SUB_MIN_GAP) {
 }
 
 function wordsToSubs(words) {
-  const MAX_DUR=5.5, MAX_CHARS=120, MIN_GAP=0.45;
+  const MAX_DUR=5.5, MAX_CHARS=120, MIN_GAP=0.45, MIN_DUR=1.0;
   const subs=[]; let group=[],gStart=null;
 
   function flush(endTime) {
     if(!group.length) return;
     const text=group.map(w=>w.text).join(' ').replace(/\s+([,.])/g,'$1').trim();
-    if(text) subs.push({index:subs.length+1,start:secToSrt(gStart),end:secToSrt(endTime),text});
+    if(text){
+      // Enforce minimum display duration (1 s) per style guide
+      const adjEnd=Math.max(endTime, gStart+MIN_DUR);
+      subs.push({index:subs.length+1,start:secToSrt(gStart),end:secToSrt(adjEnd),text});
+    }
     group=[]; gStart=null;
   }
 
@@ -2211,8 +2241,8 @@ function updateHeaderLangs() {
   el.innerHTML = '';
   if (!subtitles.length) return;
 
-  const srcLang = $('srcLangSelect')?.value || 'Source';
-  const srcCode = srcLang === 'Auto-detect' ? 'SRC' : (LANG_CODES[srcLang] || srcLang.slice(0,2).toUpperCase());
+  const srcLang = getSrcLang();
+  const srcCode = srcLang === 'Auto-detect' ? 'SRC' : (LANG_CODES[srcLang] || srcLang.slice(0,3).toUpperCase());
   el.appendChild(makeLangPill(srcCode, activeTab === 'source', () => switchToTab('source')));
 
   const langs = Object.keys(translations);
