@@ -847,10 +847,6 @@ input[type=file]{display:none}
       <span class="tl-badge tl-badge-chars" id="tlCharsBadge" style="display:none">— chars</span>
       <span class="tl-badge tl-badge-cps" id="tlCpsBadge" style="display:none">— cps</span>
       <div style="flex:1"></div>
-      <div class="tl-view-toggle">
-        <button id="tlBtnBoxes" class="active" onclick="tlSetView('boxes')">Boxes</button>
-        <button id="tlBtnBars" onclick="tlSetView('bars')">Bars</button>
-      </div>
       <label class="tl-snap-label"><input type="checkbox" id="tlSnap" checked> Snap</label>
       <input type="file" id="tlAudioInput" accept="audio/*,video/*" style="display:none" onchange="tlLoadFile(this.files[0])">
       <button class="btn" style="font-size:10.5px;padding:2px 8px;height:25px" onclick="$('tlAudioInput').click()">Load audio</button>
@@ -2536,48 +2532,42 @@ function tlRender(){
     }
   }
 
-  // ── Subtitle blocks ──
-  if(tlViewMode==='boxes'){
-    subs.forEach((s,i)=>{
-      const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
-      const x0=tlToPx(s0,W), x1=tlToPx(s1,W);
-      const bW=Math.max(3,x1-x0), bH=BLOCK_H-8, bY=BLOCK_Y+4;
-      const isActive=i===tlActiveCue;
-      const cst=charStatus(s.text);
+  // ── Subtitle blocks (boxes only, no border — fill + rounded corners) ──
+  subs.forEach((s,i)=>{
+    const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
+    const x0=tlToPx(s0,W), x1=tlToPx(s1,W);
+    const bW=Math.max(4,x1-x0), bH=BLOCK_H-6, bY=BLOCK_Y+3;
+    const isActive=i===tlActiveCue;
+    const cst=charStatus(s.text);
+    // Fill with rounded corners, no border
+    const R=8; // corner radius
+    if(cst==='error'){
+      ctx.fillStyle=isActive?'rgba(210,55,30,0.30)':'rgba(210,55,30,0.14)';
+    } else if(cst==='warn'){
+      ctx.fillStyle=isActive?'rgba(217,119,6,0.32)':'rgba(217,119,6,0.14)';
+    } else {
       ctx.fillStyle=isActive?TLC.subActive:TLC.subFill;
-      tlRoundRect(ctx,x0,bY,bW,bH,5,true,false);
-      ctx.strokeStyle=isActive?TLC.subActiveBorder:(cst!=='ok'?TLC.subWarn:TLC.subBorder);
-      ctx.lineWidth=isActive?1.8:1;
-      tlRoundRect(ctx,x0+0.5,bY+0.5,Math.max(1,bW-1),bH-1,4.5,false,true);
-      // edge handles
-      ctx.fillStyle=isActive?TLC.subActiveBorder:TLC.subBorder;
-      tlRoundRect(ctx,x0,bY,3,bH,2,true,false);
-      if(bW>5) tlRoundRect(ctx,x1-3,bY,3,bH,2,true,false);
-      // label
-      if(bW>14){
-        ctx.fillStyle=isActive?TLC.subTextActive:TLC.subText;
-        ctx.font=(isActive?'600 ':'')+'9.5px system-ui,sans-serif';
-        ctx.textBaseline='middle';
-        ctx.fillText('#'+s.index,x0+6,bY+bH/2);
-        if(bW>52&&s.text){
-          const txt=tlTruncateText(ctx,s.text.replace(/\n/g,' '),bW-32);
-          if(txt) ctx.fillText(txt,x0+28,bY+bH/2);
-        }
+    }
+    tlRoundRect(ctx,x0,bY,bW,bH,Math.min(R,bW/2,bH/2),true,false);
+    // Subtle left accent bar for active
+    if(isActive&&bW>6){
+      ctx.fillStyle=TLC.subActiveBorder;
+      tlRoundRect(ctx,x0,bY,3,bH,Math.min(3,bH/2),true,false);
+    }
+    // Label
+    if(bW>16){
+      ctx.fillStyle=isActive?TLC.subTextActive:TLC.subText;
+      ctx.font=(isActive?'600 ':'500 ')+'11px system-ui,sans-serif';
+      ctx.textBaseline='middle';
+      const numLbl='#'+s.index;
+      ctx.fillText(numLbl,x0+8,bY+bH/2);
+      if(bW>60&&s.text){
+        ctx.font=(isActive?'500 ':'400 ')+'11px system-ui,sans-serif';
+        const txt=tlTruncateText(ctx,s.text.replace(/\n/g,' '),bW-44);
+        if(txt) ctx.fillText(txt,x0+34,bY+bH/2);
       }
-    });
-  } else {
-    // Bars mode — colored waveform regions
-    subs.forEach((s,i)=>{
-      const s0=tlSrtToSec(s.start), s1=tlSrtToSec(s.end);
-      const x0=tlToPx(s0,W), x1=tlToPx(s1,W), bW=x1-x0;
-      if(bW<1) return;
-      const isActive=i===tlActiveCue;
-      ctx.fillStyle=isActive?'rgba(215,90,55,0.16)':'rgba(215,90,55,0.06)';
-      ctx.fillRect(x0,WAVE_Y,bW,WAVE_H);
-      ctx.strokeStyle=isActive?TLC.subActiveBorder:TLC.subBorder;
-      ctx.lineWidth=1; ctx.strokeRect(x0+0.5,WAVE_Y+0.5,bW-1,WAVE_H-1);
-    });
-  }
+    }
+  });
 
   // ── Playhead ──
   const px=tlToPx(tlPlayhead,W);
@@ -2661,12 +2651,7 @@ function tlScrollToCue(idx){
   wrap.scrollLeft=Math.max(0,mid-wrap.clientWidth/2);
 }
 
-function tlSetView(mode){
-  tlViewMode=mode;
-  $('tlBtnBoxes').classList.toggle('active',mode==='boxes');
-  $('tlBtnBars').classList.toggle('active',mode==='bars');
-  tlRender();
-}
+function tlSetView(mode){ tlViewMode=mode; tlRender(); }
 
 // ── Playback ──
 function tlTogglePlay(){
