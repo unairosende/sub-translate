@@ -89,11 +89,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .sub-toolbar{height:46px;background:var(--panel);border-bottom:1px solid var(--line);padding:0 14px;display:flex;align-items:center;gap:0;flex-shrink:0;overflow:hidden}
 .lang-tabs-bar{display:flex;align-items:center;overflow-x:auto;flex-shrink:0;max-width:45%}
 .lang-tabs-bar::-webkit-scrollbar{height:0}
-.ltab{display:flex;align-items:center;gap:5px;padding:0 11px;height:46px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--ink-3);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none}
+.ltab{display:flex;align-items:center;gap:5px;padding:0 11px;height:46px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--ink-3);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none;position:relative}
 .ltab:hover{color:var(--ink-2)}
 .ltab.active{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.ltab.active::after{content:'';position:absolute;bottom:-1px;left:10px;right:10px;height:2.5px;border-radius:2px;background:var(--accent)}
 .ltab.src{color:var(--ink-2)}
-.ltab.src.active{color:var(--ink);border-bottom-color:var(--line)}
+.ltab.src.active{color:var(--ink);border-bottom-color:transparent}
+.ltab.src.active::after{background:var(--ink-2)}
 .ltab-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
 .ltab-x{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:13px;line-height:1;transition:all .15s}
 .ltab-x:hover{background:var(--err-soft);color:oklch(0.42 0.16 25)}
@@ -841,7 +843,7 @@ input[type=file]{display:none}
     <div class="tl-handle" id="tlHandle" title="Drag to resize"></div>
     <!-- Info bar -->
     <div class="tl-infobar">
-      <button class="tl-play-btn" id="tlPlayBtn" onclick="tlTogglePlay()" title="Play / pause">▶</button>
+      <button class="tl-play-btn" id="tlPlayBtn" onclick="tlTogglePlay()" title="Play / pause  [Space]  ←→ frame  ↑↓ start/end">▶</button>
       <span class="tl-timecode" id="tlTimecode">00:00:00,000</span>
       <span class="tl-badge tl-badge-cue" id="tlCueBadge" style="display:none">Cue #—</span>
       <span class="tl-badge tl-badge-chars" id="tlCharsBadge" style="display:none">— chars</span>
@@ -980,13 +982,51 @@ function closeCommandPalette() {
   $('cmdPalette').style.display = 'none';
   $('cmdInput').value = '';
 }
+const FRAME_SEC = 1 / 25; // 40 ms — one frame at 25 fps
+
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCommandPalette(); }
   if (e.key === 'Escape' && $('cmdPalette').style.display !== 'none') closeCommandPalette();
   if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
     if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') { e.preventDefault(); applyUndo(); }
   }
+
+  // ── Timeline transport shortcuts (only when not typing) ──
+  const typing = e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT';
+  if (typing) return;
+
+  if (e.key === ' ') {
+    // Space — play / pause
+    e.preventDefault();
+    tlTogglePlay();
+  } else if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey) {
+    // ← one frame back
+    e.preventDefault();
+    tlSeek(tlPlayhead - FRAME_SEC);
+  } else if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey) {
+    // → one frame forward
+    e.preventDefault();
+    tlSeek(tlPlayhead + FRAME_SEC);
+  } else if (e.key === 'ArrowUp') {
+    // ↑ go to beginning
+    e.preventDefault();
+    tlSeek(0);
+  } else if (e.key === 'ArrowDown') {
+    // ↓ go to end
+    e.preventDefault();
+    tlSeek(tlDuration || 0);
+  }
 });
+
+function tlSeek(t) {
+  if (tlPlaying) tlStopPlay();
+  tlPlayhead = Math.max(0, Math.min(tlDuration || 0, t));
+  const subs = tlGetSubs();
+  tlActiveCue = subs.findIndex(s => tlSrtToSec(s.start) <= tlPlayhead && tlSrtToSec(s.end) >= tlPlayhead);
+  tlRender();
+  tlUpdateInfoBar();
+  if (tlActiveCue >= 0) tlScrollToCue(tlActiveCue);
+}
 
 function signOut() {
   sessionStorage.removeItem(AUTH_KEY);
