@@ -1735,13 +1735,30 @@ async function startTranslation() {
   for(let i=0;i<snap.length;i+=BATCH){
     if(i>0){for(let c=Math.round(PAUSE/1000);c>0;c--){setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);await sleep(1000);}}
     const batch=snap.slice(i,i+BATCH);
+    // Include the last few already-translated subtitles as context so the
+    // model maintains consistent terminology across batch boundaries.
+    const prevCtx=result.slice(-4).map(s=>`  ${s.text}`).join('\n');
     const prompt=[
-      `You are a professional subtitle translator. Translate each subtitle${srcNote} to ${lang}.`,
-      `Rules:`,`- Preserve meaning and natural spoken rhythm`,
-      `- Keep line breaks using \\n if the source has them`,
-      `- Return ONLY a JSON array of strings, one per subtitle, in order`,
-      `- No explanations, no markdown, no extra text`,``,
-      `Source subtitles (JSON array):`,JSON.stringify(batch.map(s=>s.text))
+      `You are an expert subtitle localizer. Translate the following subtitles${srcNote} into natural, idiomatic ${lang}.`,
+      ``,
+      `FORMAT CONSTRAINTS (hard limits — never exceed):`,
+      `• Max ${maxLen()} characters per line`,
+      `• Max 2 lines per subtitle — use \\n to split long lines`,
+      `• Prefer shorter translations: subtitles must fit speech duration`,
+      ``,
+      `TRANSLATION RULES:`,
+      `• Translate meaning and intent, not word-for-word`,
+      `• Use natural spoken-language register — conversational, not literary`,
+      `• Keep proper names, brand names, and technical terms unchanged unless a standard ${lang} equivalent exists`,
+      `• Adapt idioms and expressions to their ${lang} equivalent — never translate them literally`,
+      `• Do NOT add words, filler, or explanations absent from the source`,
+      `• Maintain consistent terminology: if a term appears multiple times, always translate it the same way`,
+      ``,
+      ...(prevCtx?[`PREVIOUS SUBTITLES (already translated — use for terminology consistency):`,prevCtx,``]:[]),
+      `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
+      ``,
+      `SOURCE:`,
+      JSON.stringify(batch.map(s=>s.text))
     ].join('\n');
     try{
       const raw=await callProvider(prompt);
