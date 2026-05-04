@@ -1443,7 +1443,8 @@ function parseTXT(text) {
 // ══════════════════════════════════════════════════════════════
 function charStatus(text) {
   const lines=(text||'').split('\n'), longest=Math.max(0,...lines.map(l=>l.length));
-  if(longest>maxLen()||lines.length>settings.maxLinesPerSub) return 'error';
+  // Hard limit: never more than 2 lines (style-guide), regardless of maxLinesPerSub setting
+  if(longest>maxLen()||lines.length>Math.min(2,settings.maxLinesPerSub)) return 'error';
   if(longest>Math.floor(maxLen()*0.85)) return 'warn';
   return 'ok';
 }
@@ -1816,8 +1817,9 @@ function fixOverlength() {
   const subs = activeTab==='source' ? subtitles : translations[activeTab];
   if(!subs?.length){ setStatus('Nothing to fix','err'); return; }
   const limit=maxLen();
-  const toFix=subs.filter(s=>charStatus(s.text)==='error');
-  if(!toFix.length){ setStatus('No overlength subtitles','ok'); return; }
+  // Fix: overlength lines (error) OR more than 2 lines (hard style-guide limit)
+  const toFix=subs.filter(s=>charStatus(s.text)==='error'||s.text.split('\n').length>2);
+  if(!toFix.length){ setStatus('No issues to fix','ok'); return; }
   pushUndo();
   let fixed=0;
   toFix.forEach(s=>{
