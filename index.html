@@ -742,6 +742,12 @@ input[type=file]{display:none}
   <!-- hidden: allowRephrase kept in DOM for JS compatibility but always true -->
   <input type="checkbox" id="allowRephrase" checked style="display:none">
 
+  <!-- ── Custom prompt instructions ── -->
+  <div class="s-sec">
+    <div class="s-title">Extra instructions <span style="font-weight:400;color:var(--ink-3);font-size:10px">· added to every translation prompt</span></div>
+    <textarea id="customPromptInstructions" class="paste-area" rows="3" placeholder="e.g. &quot;Speaker is female.&quot; &quot;Formal tone.&quot; &quot;Keep 'AI' untranslated.&quot;" style="font-size:11.5px;resize:vertical;min-height:52px" oninput="saveStateLocally()"></textarea>
+  </div>
+
   <!-- ── Actions ── -->
   <div class="s-sec" style="margin-top:auto;display:flex;flex-direction:column;gap:7px">
     <button class="btn btn-accent" id="translateBtn" onclick="startTranslation()" disabled style="width:100%;justify-content:center">
@@ -1348,49 +1354,87 @@ function parseXLSXBuffer(buf, filename) {
   } catch(e) { setStatus('XLSX parse error: '+e.message,'err'); }
 }
 
+// ── Proper RFC-4180 CSV parser (handles quoted fields with commas/newlines) ──
+function parseCSVRows(text) {
+  const rows=[], RE=/("(?:[^"]|"")*"|[^,\r\n]*)(,|\r?\n|\r|$)/g;
+  let row=[], first=true;
+  for(const m of text.matchAll(RE)){
+    if(m[0]==='') break;
+    let val=m[1];
+    if(val.startsWith('"')&&val.endsWith('"')) val=val.slice(1,-1).replace(/""/g,'"');
+    row.push(val.trim());
+    if(m[2]!==','){ // end of row
+      if(!first||row.some(c=>c)) rows.push(row);
+      row=[]; first=false;
+    }
+  }
+  if(row.length) rows.push(row);
+  return rows;
+}
+
+const TC_RE=/^\d{1,2}:\d{2}:\d{2}[,.:]\d{2,3}$|^\d{1,2}:\d{2}[,.:]\d{2,3}$/;
+function looksLikeTimecode(s){ return TC_RE.test((s||'').trim()); }
+
 function isMultiLangCSV(text) {
-  const first=(text.trim().split('\n')[0]||'');
-  const cols=first.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
-  if(cols.length<4) return false;
-  const h0=cols[0].toLowerCase(), h1=cols[1].toLowerCase();
-  return (h0.includes('start')||h0.includes('time'))&&(h1.includes('end')||h1.includes('time'));
+  const rows=parseCSVRows(text);
+  if(!rows||rows.length<2) return false;
+  // Check either header row or first data row for timecodes in cols 0-1
+  const r0=rows[0], r1=rows[1]||[];
+  if(r0.length<3) return false;
+  // Timecodes in first data row → definitely multi-lang
+  if(looksLikeTimecode(r1[0])&&looksLikeTimecode(r1[1])) return true;
+  // Or header words + timecodes in r1
+  const h0=(r0[0]||'').toLowerCase(), h1=(r0[1]||'').toLowerCase();
+  return (h0.includes('start')||h0.includes('in')||h0.includes('time'))&&
+         (h1.includes('end')||h1.includes('out')||h1.includes('time'));
 }
 function isMultiLangHeaders(headers) {
-  if(!headers||headers.length<4) return false;
+  if(!headers||headers.length<3) return false;
   const h0=String(headers[0]).toLowerCase().trim(), h1=String(headers[1]).toLowerCase().trim();
-  return (h0.includes('start')||h0.includes('time'))&&(h1.includes('end')||h1.includes('time'));
+  if(looksLikeTimecode(h0)&&looksLikeTimecode(h1)) return true; // no header, first row IS data
+  return (h0.includes('start')||h0.includes('in')||h0.includes('time'))&&
+         (h1.includes('end')||h1.includes('out')||h1.includes('time'));
 }
 
 function loadMultiLangCSV(text) {
-  const rows=text.trim().split('\n').map(line=>
-    line.split(',').map(c=>c.trim().replace(/^"|"$/g,''))
-  );
-  loadMultiLangRows(rows);
+  loadMultiLangRows(parseCSVRows(text));
 }
 
 function loadMultiLangRows(rows) {
-  if(!rows||rows.length<2){setStatus('Empty or invalid multi-language file','err');return;}
-  const headers  = rows[0].map(h=>String(h).trim());
-  const langCols = headers.slice(2).filter(Boolean);
-  const dataRows = rows.slice(1).filter(r=>r.length>=3);
+  if(!rows||rows.length<1){setStatus('Empty or invalid multi-language file','err');return;}
+
+  // Detect whether the first row is a header or data
+  // If col 0 looks like a timecode → no header row, generate column names
+  let headers, dataRows;
+  if(looksLikeTimecode(String(rows[0][0]||'').trim())){
+    // No header row — first row is data
+    const nCols=rows[0].length;
+    headers=['Start','End',...Array.from({length:nCols-2},(_,i)=>`Language ${i+1}`)];
+    dataRows=rows.filter(r=>r.length>=3);
+  } else {
+    headers=rows[0].map(h=>String(h).trim());
+    dataRows=rows.slice(1).filter(r=>r.length>=3);
+  }
+
+  const langCols=headers.slice(2).filter(Boolean);
   if(!langCols.length){setStatus('No language columns found','err');return;}
 
-  // First language column → source
+  // col 2 → source subtitles
   subtitles=dataRows.map((row,i)=>({
     index:i+1,
-    start:String(row[0]||'00:00:00,000').trim(),
-    end:  String(row[1]||'00:00:01,000').trim(),
+    start:String(row[0]||'00:00:00,000').trim().replace('.',','),
+    end:  String(row[1]||'00:00:01,000').trim().replace('.',','),
     text: String(row[2]||'').trim()
   })).filter(s=>s.text);
 
-  // Additional language columns → translations
+  // col 3+ → translations
   translations={}; backTranslations={};
   langCols.slice(1).forEach((lang,li)=>{
     if(!lang) return;
     translations[lang]=dataRows.map((row,i)=>({
       index:i+1,
-      start:String(row[0]||'00:00:00,000').trim(),
-      end:  String(row[1]||'00:00:01,000').trim(),
+      start:String(row[0]||'00:00:00,000').trim().replace('.',','),
+      end:  String(row[1]||'00:00:01,000').trim().replace('.',','),
       text: String(row[li+3]||'').trim()
     })).filter(s=>s.text);
   });
@@ -1421,14 +1465,18 @@ function parseSRT(text) {
   }).filter(Boolean);
 }
 function parseCSV(text) {
-  return text.trim().split('\n').map((line,i)=>{
-    if(i===0&&/^start\s*,/i.test(line)) return null;
-    const parts=line.split(',');
-    if(parts.length>=3){
-      const txt=parts.slice(2).join(',').replace(/^"|"$/g,'').trim();
-      return txt?{index:i,start:parts[0].trim(),end:parts[1].trim(),text:txt}:null;
+  const rows=parseCSVRows(text);
+  let start=0;
+  // Skip optional header row
+  if(rows.length&&!looksLikeTimecode(String(rows[0][0]||'').trim())) start=1;
+  return rows.slice(start).map((cols,i)=>{
+    if(cols.length>=3&&looksLikeTimecode(String(cols[0]).trim())){
+      // Standard: col0=start, col1=end, col2+=text
+      const txt=cols.slice(2).join(' ').trim();
+      return txt?{index:i+1,start:cols[0].trim().replace('.',','),end:cols[1].trim().replace('.',','),text:txt}:null;
     }
-    const txt=line.replace(/^"|"$/g,'').trim();
+    // Single-column: plain text
+    const txt=cols.join(' ').trim();
     return txt?{index:i+1,start:'00:00:00,000',end:'00:00:01,000',text:txt}:null;
   }).filter(Boolean).map((s,i)=>({...s,index:i+1}));
 }
@@ -1738,6 +1786,7 @@ async function startTranslation() {
     // Include the last few already-translated subtitles as context so the
     // model maintains consistent terminology across batch boundaries.
     const prevCtx=result.slice(-4).map(s=>`  ${s.text}`).join('\n');
+    const extraInstructions=($('customPromptInstructions')?.value||'').trim();
     const prompt=[
       `You are a professional subtitle translator. Translate the following subtitles${srcNote} into ${lang}.`,
       ``,
@@ -1753,6 +1802,7 @@ async function startTranslation() {
       `• Keep proper names, brand names, and technical terms exactly as in the source`,
       `• Maintain consistent terminology throughout`,
       ``,
+      ...(extraInstructions?[`ADDITIONAL INSTRUCTIONS (apply to every subtitle):`,extraInstructions,``]:[]),
       ...(prevCtx?[`PREVIOUS SUBTITLES (already translated — use for terminology consistency):`,prevCtx,``]:[]),
       `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
       ``,
@@ -2434,6 +2484,7 @@ function saveStateLocally() {
       srcLang: $('srcLangSelect')?.value,
       tgtLang: $('langSelect')?.value,
       outputMode,
+      customInstructions: $('customPromptInstructions')?.value||'',
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     markSaved();
@@ -2453,6 +2504,7 @@ function loadStateLocally() {
       translations = state.translations || {};
       if (state.settings) Object.assign(settings, state.settings);
       if (state.srcLang && $('srcLangSelect')) $('srcLangSelect').value = state.srcLang;
+      if (state.customInstructions && $('customPromptInstructions')) $('customPromptInstructions').value = state.customInstructions;
       if (state.tgtLang && $('langSelect')) $('langSelect').value = state.tgtLang;
       if (state.outputMode) {
         outputMode = state.outputMode;
