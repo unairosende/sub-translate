@@ -2206,7 +2206,14 @@ function audioBufferToWav(buffer) {
 }
 
 function secToSrt(sec) {
-  sec=sec||0; const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.round((sec%1)*1000);
+  // Snap to 25fps frame boundary (40ms), then compute components
+  sec = Math.round((sec||0) * 25) / 25;
+  const totalMs = Math.round(sec * 1000);
+  const ms  = totalMs % 1000;
+  const tot = Math.floor(totalMs / 1000);
+  const h   = Math.floor(tot / 3600);
+  const m   = Math.floor((tot % 3600) / 60);
+  const s   = tot % 60;
   return pad(h)+':'+pad(m)+':'+pad(s)+','+String(ms).padStart(3,'0');
 }
 
