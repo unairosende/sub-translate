@@ -1988,8 +1988,9 @@ function exportFile() {
     setStatus('Exported ✓','ok'); return;
   }
   let content='';
-  if(fmt==='srt')      content=subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';
-  else if(fmt==='csv') content='Start Time,End Time,Text\n'+subs.map(s=>`${s.start},${s.end},"${s.text.replace(/"/g,'""')}"`).join('\n');
+  const BOM='﻿';
+  if(fmt==='srt')      content=BOM+subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';
+  else if(fmt==='csv') content='Start Time,End Time,Text\n'+subs.map(s=>`"${s.start}","${s.end}","${s.text.replace(/"/g,'""')}"`).join('\n');
   else                 content=subs.map(s=>s.text).join('\n');
   dlText(content,slug+'.'+fmt);
   setStatus('Exported ✓','ok');
