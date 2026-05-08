@@ -1374,6 +1374,19 @@ function parseCSVRows(text) {
 
 const TC_RE=/^\d{1,2}:\d{2}:\d{2}[,.:]\d{2,3}$|^\d{1,2}:\d{2}[,.:]\d{2,3}$/;
 function looksLikeTimecode(s){ return TC_RE.test((s||'').trim()); }
+// Normalize any timecode string to SRT format HH:MM:SS,mmm
+// 2-digit sub-second part = frames at 25fps → convert to ms; 3-digit = already ms
+function normalizeTc(s) {
+  s=(s||'').trim();
+  const m=s.match(/^(\d{1,2}):(\d{2}):(\d{2})[,.:"](\d{2,3})$/) || s.match(/^(\d{1,2}):(\d{2})[,.:"](\d{2,3})$/);
+  if(!m) return s.replace('.',','); // fallback: dot→comma only
+  if(m.length===5){
+    const ms=m[4].length===2?Math.round(+m[4]*1000/25):+m[4];
+    return pad(+m[1])+':'+pad(+m[2])+':'+pad(+m[3])+','+String(ms).padStart(3,'0');
+  }
+  const ms=m[3].length===2?Math.round(+m[3]*1000/25):+m[3];
+  return '00:'+pad(+m[1])+':'+pad(+m[2])+','+String(ms).padStart(3,'0');
+}
 
 function isMultiLangCSV(text) {
   const rows=parseCSVRows(text);
@@ -1422,8 +1435,8 @@ function loadMultiLangRows(rows) {
   // col 2 → source subtitles
   subtitles=dataRows.map((row,i)=>({
     index:i+1,
-    start:String(row[0]||'00:00:00,000').trim().replace('.',','),
-    end:  String(row[1]||'00:00:01,000').trim().replace('.',','),
+    start:normalizeTc(String(row[0]||'00:00:00,000')),
+    end:  normalizeTc(String(row[1]||'00:00:01,000')),
     text: String(row[2]||'').trim()
   })).filter(s=>s.text);
 
@@ -1433,8 +1446,8 @@ function loadMultiLangRows(rows) {
     if(!lang) return;
     translations[lang]=dataRows.map((row,i)=>({
       index:i+1,
-      start:String(row[0]||'00:00:00,000').trim().replace('.',','),
-      end:  String(row[1]||'00:00:01,000').trim().replace('.',','),
+      start:normalizeTc(String(row[0]||'00:00:00,000')),
+      end:  normalizeTc(String(row[1]||'00:00:01,000')),
       text: String(row[li+3]||'').trim()
     })).filter(s=>s.text);
   });
@@ -1459,7 +1472,7 @@ function parseSRT(text) {
     const ls=b.trim().split('\n'); if(ls.length<2) return null;
     const idx=parseInt(ls[0])||0;
     const ar=ls[1].indexOf('-->'); if(ar<0) return null;
-    const start=ls[1].slice(0,ar).trim(), end=ls[1].slice(ar+3).trim();
+    const start=normalizeTc(ls[1].slice(0,ar).trim()), end=normalizeTc(ls[1].slice(ar+3).trim());
     const txt=ls.slice(2).join('\n').replace(/<[^>]+>/g,'').trim();
     return txt?{index:idx,start,end,text:txt}:null;
   }).filter(Boolean);
@@ -1473,7 +1486,7 @@ function parseCSV(text) {
     if(cols.length>=3&&looksLikeTimecode(String(cols[0]).trim())){
       // Standard: col0=start, col1=end, col2+=text
       const txt=cols.slice(2).join(' ').trim();
-      return txt?{index:i+1,start:cols[0].trim().replace('.',','),end:cols[1].trim().replace('.',','),text:txt}:null;
+      return txt?{index:i+1,start:normalizeTc(cols[0]),end:normalizeTc(cols[1]),text:txt}:null;
     }
     // Single-column: plain text
     const txt=cols.join(' ').trim();
