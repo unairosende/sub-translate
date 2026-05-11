@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       const parts = data?.candidates?.[0]?.content?.parts || [];
       const textPart = parts.find(p => !p.thought) || parts[0];
       rawText = textPart?.text || '[]';
+      console.log('[translate] parts count:', parts.length, '| rawText preview:', rawText?.slice(0,200));
     } else {
       const urls   = { groq: 'https://api.groq.com/openai/v1/chat/completions',
                        openrouter: 'https://openrouter.ai/api/v1/chat/completions',
