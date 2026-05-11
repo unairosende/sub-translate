@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { prompt, model = 'gemini-2.5-flash', provider = 'gemini' } = req.body;
+  const { prompt, model = 'gemini-2.5-flash-latest', provider = 'gemini' } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
   const geminiKey = process.env.gemini_key;
