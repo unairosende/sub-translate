@@ -1865,7 +1865,7 @@ async function startTranslation() {
     ].join('\n');
     try{
       const raw=await callProvider(prompt);
-      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
+      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());console.log('[dbg] parsed[0]:',parsed?.[0]);}catch(pe){parsed=batch.map(s=>s.text);console.warn('[dbg] JSON parse fail:',pe.message,'raw:',raw?.slice(0,120));}
       batch.forEach((s,j)=>{
         let txt=parsed[j]!==undefined?parsed[j]:s.text;
         // Sanitize: strip \r, cap to maxLinesPerSub lines
