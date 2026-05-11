@@ -18,11 +18,15 @@ export default async function handler(req, res) {
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }) }
+            generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+            thinkingConfig: { thinkingBudget: 0 } }) }
       );
       const data = await r.json();
       if (data.error) return res.status(r.status).json({ error: data.error.message, is429: r.status === 429 || data.error.code === 429 || data.error.status === 'RESOURCE_EXHAUSTED' });
-      rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      // Skip thinking parts (thought:true) — find the actual text response
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const textPart = parts.find(p => !p.thought) || parts[0];
+      rawText = textPart?.text || '[]';
     } else {
       const urls   = { groq: 'https://api.groq.com/openai/v1/chat/completions',
                        openrouter: 'https://openrouter.ai/api/v1/chat/completions',
