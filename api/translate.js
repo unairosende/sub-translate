@@ -21,7 +21,7 @@ export default async function handler(req, res) {
             generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }) }
       );
       const data = await r.json();
-      if (data.error) return res.status(r.status).json({ error: data.error.message, is429: data.error.code === 429 });
+      if (data.error) return res.status(r.status).json({ error: data.error.message, is429: r.status === 429 || data.error.code === 429 || data.error.status === 'RESOURCE_EXHAUSTED' });
       rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     } else {
       const urls   = { groq: 'https://api.groq.com/openai/v1/chat/completions',

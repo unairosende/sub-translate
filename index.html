@@ -1809,8 +1809,8 @@ async function callProvider(prompt,_key,retries=3) {
       return data.text||'[]';
     } catch(e){
       if(e.is429&&attempt<retries-1){
-        const w=30000*(attempt+1);
-        for(let c=Math.round(w/1000);c>0;c--){setStatus(`Rate limit — retry in ${c}s… (${attempt+1}/${retries})`);await sleep(1000);}
+        const w=15000*(attempt+1);
+        for(let c=Math.round(w/1000);c>0;c--){setStatus(`Rate limit — retry in ${c}s… (${attempt+1}/${retries}) — check quota at aistudio.google.com`);await sleep(1000);}
         continue;
       }
       throw e;
