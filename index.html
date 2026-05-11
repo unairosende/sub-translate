@@ -1831,7 +1831,7 @@ async function startTranslation() {
   setTranslateBtn(true,'Translating…'); showProgress(0); setStatus('Translating…');
   const fill={style:{width:''}}; // legacy no-op shim
   const snap=[...subtitles], result=[];
-  const BATCH=window._providerBatch||15, PAUSE=window._providerPause||3000;
+  const BATCH=window._providerBatch||15, PAUSE=window._providerPause||6000;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
   for(let i=0;i<snap.length;i+=BATCH){
@@ -1988,7 +1988,7 @@ async function startBackTranslation() {
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
   showProgress(0); setStatus(`Back-translating to ${srcLang}…`);
-  const subs=translations[lang], BATCH=window._providerBatch||15, PAUSE=window._providerPause||3000;
+  const subs=translations[lang], BATCH=window._providerBatch||15, PAUSE=window._providerPause||6000;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const result=[];
   for(let i=0;i<subs.length;i+=BATCH){
