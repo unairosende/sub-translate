@@ -100,6 +100,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .ltab-x{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:13px;line-height:1;transition:all .15s}
 .ltab-x:hover{background:var(--err-soft);color:oklch(0.42 0.16 25)}
 .ltab-sep{width:1px;height:16px;background:var(--line);margin:0 4px;flex-shrink:0}
+.ltab-add{height:22px;padding:0 7px;border-radius:5px;border:1px dashed var(--line);background:none;color:var(--ink-3);font-size:14px;line-height:1;cursor:pointer;margin-left:4px;transition:all .15s}
+.ltab-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .tabs-info{display:none}
 .toolbar-div{width:1px;height:20px;background:var(--line);margin:0 10px;flex-shrink:0}
 .toolbar-chips{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden}
@@ -576,6 +578,7 @@ input[type=file]{display:none}
     <!-- Import panel -->
     <div id="panel-import">
       <input type="file" id="fileInput" accept=".srt,.txt,.csv,.xlsx">
+      <input type="file" id="addTabInput" accept=".srt,.txt,.csv" style="display:none">
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <button class="btn" onclick="document.getElementById('fileInput').click()" style="flex:1;width:auto">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M3 6l5-5 5 5M1 12v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
@@ -1282,6 +1285,12 @@ function rebuildTabs() {
       bar.appendChild(tab);
     });
   }
+  // "+" button — import an existing subtitle file as a new tab
+  const addBtn=el('button','ltab-add');
+  addBtn.textContent='+'; addBtn.title='Add subtitle file as new tab';
+  addBtn.onclick=()=>$('addTabInput').click();
+  bar.appendChild(addBtn);
+
   const info=el('span','tabs-info');
   info.textContent=langs.length?langs.length+' language'+(langs.length>1?'s':''):'no translations yet';
   bar.appendChild(info);
@@ -1299,6 +1308,38 @@ function closeTab(lang) {
   rebuildTabs(); updateExportAllBtn(); renderCurrentView();
   updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
 }
+
+// ── Import existing subtitle file as a new translation tab ──
+$('addTabInput').addEventListener('change', e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result||'';
+    const ext=f.name.split('.').pop().toLowerCase();
+    let subs;
+    if(ext==='csv')      subs=parseCSV(text);
+    else if(ext==='txt') subs=parseTXT(text);
+    else                 subs=parseSRT(text);
+    if(!subs?.length){setStatus('No subtitles found in file','err');return;}
+    // Suggest language name from filename (strip extension)
+    const suggested=f.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ').trim();
+    let lang=prompt('Language name for this tab:', suggested||'Language');
+    if(!lang) return; // cancelled
+    lang=lang.trim();
+    if(!lang){setStatus('Language name required','err');return;}
+    // Avoid collision
+    if(translations[lang]){
+      let n=2; while(translations[lang+' '+n]) n++;
+      lang=lang+' '+n;
+    }
+    translations[lang]=subs;
+    switchToTab(lang);
+    updateExportAllBtn(); saveStateLocally();
+    setStatus(`Loaded ${subs.length} subtitles → "${lang}"`, 'ok');
+  };
+  reader.readAsText(f,'utf-8');
+});
 
 // ══════════════════════════════════════════════════════════════
 //  IMPORT / PARSE
