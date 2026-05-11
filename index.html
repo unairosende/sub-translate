@@ -1052,7 +1052,7 @@ let settings = {
   maxLinesPerSub:      2,
   elModel:            'scribe_v1',
   translationProvider:    'gemini',
-  translationModel:       'gemini-2.5-flash-latest',
+  translationModel:       'gemini-2.5-flash',
 };
 
 // ── App state ──────────────────────────────────────────────
@@ -1136,7 +1136,6 @@ const PROVIDERS = {
     hint:'Get key: aistudio.google.com — No credit card needed',
     validate: v => v.startsWith('AIza') && v.length > 20,
     models:[
-      {id:'gemini-2.5-flash-latest', name:'Gemini 2.5 Flash Latest · always up to date'},
       {id:'gemini-2.5-flash',        name:'Gemini 2.5 Flash        · 1K RPM (paid)'},
       {id:'gemini-2.5-flash-lite',   name:'Gemini 2.5 Flash Lite   · 4K RPM (paid)'},
       {id:'gemini-2.0-flash',        name:'Gemini 2.0 Flash        · 2K RPM (paid)'},
