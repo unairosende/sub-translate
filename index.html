@@ -343,6 +343,8 @@ input[type=file]{display:none}
 /* ── Split button on cards ── */
 .split-btn{display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 6px;border-radius:5px;font:500 10.5px/1 var(--sans);cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink-3);white-space:nowrap;transition:all .12s}
 .split-btn:hover{background:var(--line-2);color:var(--ink-2)}
+.del-btn{margin-left:2px;color:var(--red,#c0392b)}
+.del-btn:hover{background:#fdecea;color:var(--red,#c0392b)}
 
 /* ── Timeline panel ── */
 .tl-panel{height:210px;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:height .18s ease}
@@ -1614,7 +1616,8 @@ function makeCard(sub,editable,lang) {
   card.dataset.idx=sub.index; card.dataset.lang=lang;
   const safeText = sub.text || '';
   const splitBtnHtml = lang==='source'
-    ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`
+    ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`+
+      `<button class="split-btn del-btn" onclick="event.stopPropagation();deleteSubtitle(${sub.index})" title="Delete this subtitle">✕</button>`
     : '';
   card.innerHTML=
     `<div class="sub-idx">#${sub.index}</div>`+
@@ -2502,6 +2505,9 @@ function splitSubtitle(idx) {
   if (!src) return;
   pushUndo();
 
+  // Preserve scroll position across all panes
+  const scrollTops = [...document.querySelectorAll('.pane-scroll')].map(p => p.scrollTop);
+
   function splitEntry(sub) {
     const mid = midTimecode(sub.start, sub.end);
     const words = sub.text.replace(/\n/g, ' ').split(' ').filter(Boolean);
@@ -2528,6 +2534,27 @@ function splitSubtitle(idx) {
   });
 
   rebuildTabs(); renderCurrentView(); updateHeaderMeta(); saveStateLocally();
+
+  // Restore scroll positions after re-render
+  [...document.querySelectorAll('.pane-scroll')].forEach((p, i) => {
+    if (scrollTops[i] !== undefined) p.scrollTop = scrollTops[i];
+  });
+}
+
+function deleteSubtitle(idx) {
+  pushUndo();
+
+  function removeAndRenumber(arr) {
+    return arr.filter(s => s.index !== idx).map((s, i) => ({ ...s, index: i + 1 }));
+  }
+
+  subtitles = removeAndRenumber(subtitles);
+  Object.keys(translations).forEach(lang => {
+    if (translations[lang]) translations[lang] = removeAndRenumber(translations[lang]);
+  });
+
+  rebuildTabs(); renderCurrentView(); updateHeaderMeta(); saveStateLocally();
+  setStatus(`Subtitle #${idx} deleted`, 'ok');
 }
 
 // ══════════════════════════════════════════════════════════════
