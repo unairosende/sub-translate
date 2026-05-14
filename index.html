@@ -453,6 +453,12 @@ input[type=file]{display:none}
       </div>
 
       <div class="sg-sep"></div>
+      <div class="sg-title">View</div>
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="vbtn active" id="vbtn-list"    onclick="setView('list');saveSettings()" style="flex:1;border:1px solid var(--line);border-radius:6px">List</button>
+        <button class="vbtn"        id="vbtn-compare" onclick="setView('compare');saveSettings()" style="flex:1;border:1px solid var(--line);border-radius:6px">Compare</button>
+      </div>
+      <div class="sg-sep"></div>
       <div class="sg-title">Translation</div>
       <div class="sg-row">
         <span class="sg-label">Provider</span>
@@ -535,18 +541,13 @@ input[type=file]{display:none}
       <path d="M2 4h7M5 2v2M1 8s1.5 3 5 3 5-3 5-3"/>
       <path d="M11 5l3 7M13 5l-2 7"/>
     </svg>
+    <span id="railCueBadge" style="display:none">0</span>
   </div>
   <button class="rail-icon active" id="railSourceBtn" onclick="toggleSourcePanel()" title="Source & Settings">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <rect x="1" y="1" width="14" height="14" rx="2"/>
       <path d="M5 1v14"/>
     </svg>
-  </button>
-  <button class="rail-icon" title="Cues" onclick="setView('list')">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <path d="M2 4h12M2 8h12M2 12h7"/>
-    </svg>
-    <span class="rail-badge" id="railCueBadge" style="display:none">0</span>
   </button>
   <button class="rail-icon" title="Settings" onclick="openSettings()">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -590,7 +591,7 @@ input[type=file]{display:none}
       <!-- clearBtn kept hidden for JS compatibility -->
       <button id="clearBtn" onclick="clearAll()" style="display:none" disabled></button>
       <textarea class="paste-area" id="pasteArea" placeholder="Or paste SRT / CSV / TXT content here…" rows="3"></textarea>
-      <button class="btn btn-ghost" onclick="parsePaste()" style="margin-top:6px;font-size:12px;width:100%">Parse pasted content</button>
+      <button class="btn btn-ghost" id="parsePasteBtn" onclick="parsePaste()" style="margin-top:6px;font-size:12px;width:100%;display:none">Parse</button>
       <div style="margin-top:9px">
         <div class="s-title">Hint format</div>
         <select class="select" id="importFormat">
@@ -716,16 +717,6 @@ input[type=file]{display:none}
     <input class="select" type="text" id="langCustom" placeholder="Type any language…"
       style="display:none;margin-top:6px"
       oninput="syncChips()">
-    <div class="lang-chips">
-      <span class="lchip" onclick="setLang('English')">EN</span>
-      <span class="lchip" onclick="setLang('Spanish')">ES</span>
-      <span class="lchip" onclick="setLang('French')">FR</span>
-      <span class="lchip" onclick="setLang('German')">DE</span>
-      <span class="lchip" onclick="setLang('Italian')">IT</span>
-      <span class="lchip" onclick="setLang('Catalan')">CA</span>
-      <span class="lchip" onclick="setLang('Japanese')">JA</span>
-      <span class="lchip" onclick="setLang('Korean')">KO</span>
-    </div>
   </div>
 
   <!-- ── Output format ── -->
@@ -813,12 +804,6 @@ input[type=file]{display:none}
     <div class="header-divider"></div>
     <!-- Language pills -->
     <div class="header-langs" id="headerLangs"></div>
-    <!-- Search -->
-    <div class="header-search" onclick="openCommandPalette()">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;color:var(--ink-3)"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg>
-      <span class="header-search-ph">Search ⌘K</span>
-      <span class="kbd">⌘K</span>
-    </div>
   </div>
 
   <!-- ── Top progress bar (shows during translate / fix / back-translate) ── -->
@@ -839,17 +824,13 @@ input[type=file]{display:none}
       <button class="bt-btn" id="btBtn" style="display:none" onclick="startBackTranslation()">↩ Back-translate</button>
       <span class="edit-hint" id="editHint"></span>
     </div>
-    <div class="toolbar-view">
-      <button class="vbtn active" id="vbtn-list"    onclick="setView('list')">List</button>
-      <button class="vbtn"        id="vbtn-compare" onclick="setView('compare')">Compare</button>
-    </div>
   </div>
 
   <!-- ── Editor area ── -->
   <div class="editor-area" id="editorArea"></div>
 
   <!-- ── Timeline panel ── -->
-  <div class="tl-panel" id="tlPanel">
+  <div class="tl-panel tl-collapsed" id="tlPanel">
     <!-- Resize handle -->
     <div class="tl-handle" id="tlHandle" title="Drag to resize"></div>
     <!-- Info bar -->
@@ -863,7 +844,7 @@ input[type=file]{display:none}
       <label class="tl-snap-label"><input type="checkbox" id="tlSnap" checked> Snap</label>
       <input type="file" id="tlAudioInput" accept="audio/*,video/*" style="display:none" onchange="tlLoadFile(this.files[0])">
       <button class="btn" style="font-size:10.5px;padding:2px 8px;height:25px" onclick="$('tlAudioInput').click()">Load audio</button>
-      <button class="btn btn-ghost" id="tlToggleBtn" onclick="tlToggle()" title="Hide timeline" style="font-size:12px;padding:2px 7px;height:25px">⌄</button>
+      <button class="btn btn-ghost" id="tlToggleBtn" onclick="tlToggle()" title="Show timeline" style="font-size:12px;padding:2px 7px;height:25px;transform:rotate(-90deg)">⌄</button>
       <button class="btn btn-ghost" id="tlMaxBtn" onclick="tlMaximize()" title="Expand" style="font-size:12px;padding:2px 7px;height:25px">⤢</button>
     </div>
     <!-- Waveform canvas (scrollable) -->
@@ -1063,6 +1044,7 @@ let translations     = {};
 let activeTab        = 'source';
 let outputMode       = 'horizontal';
 let viewMode         = 'list';
+let pillFilter = null; // null | 'warn' | 'err'
 let backTranslations = {};
 let currentEditCard  = null;
 let activeProvider   = 'gemini';
@@ -1500,7 +1482,32 @@ function loadMultiLangRows(rows) {
   setStatus(`Loaded ${subtitles.length} rows · ${langCols.length} language${langCols.length>1?'s':''}`, 'ok');
 }
 
+function detectAndSetSrcLang(subs) {
+  if(!subs||!subs.length) return;
+  const sample = subs.slice(0,15).map(s=>s.text.toLowerCase()).join(' ');
+  const scores = {
+    'English':   (sample.match(/\b(the|is|are|was|were|have|has|this|that|with|they|from|will)\b/g)||[]).length,
+    'Spanish':   (sample.match(/\b(el|la|los|las|de|en|que|es|un|una|con|por|para|como)\b/g)||[]).length,
+    'French':    (sample.match(/\b(le|la|les|de|du|est|une|dans|que|pas|je|tu|il|elle|nous|vous|ils)\b/g)||[]).length,
+    'German':    (sample.match(/\b(der|die|das|und|ist|nicht|ein|eine|ich|sie|wir|aber|auch|auf)\b/g)||[]).length,
+    'Italian':   (sample.match(/\b(il|la|di|che|è|non|una|per|con|del|della|ho|hai|questo)\b/g)||[]).length,
+    'Portuguese':(sample.match(/\b(o|a|os|as|de|que|é|não|um|uma|em|com|para|isso|ele|ela)\b/g)||[]).length,
+    'Dutch':     (sample.match(/\b(de|het|een|en|is|zijn|dat|ik|je|we|ze|niet|ook|van)\b/g)||[]).length,
+    'Russian':   (sample.match(/\b(и|в|не|на|я|что|это|он|она|мы|вы|они|как|с)\b/g)||[]).length,
+    'Japanese':  (sample.match(/[ひらがなカタカナ一-龯]/g)||[]).length > 3 ? 20 : 0,
+    'Korean':    (sample.match(/[가-힯]/g)||[]).length > 3 ? 20 : 0,
+    'Chinese (Simplified)': (sample.match(/[一-鿿]/g)||[]).length > 3 ? 20 : 0,
+  };
+  let best='Auto-detect', bestScore=3;
+  Object.entries(scores).forEach(([lang,score])=>{ if(score>bestScore){bestScore=score;best=lang;} });
+  if(best!=='Auto-detect') {
+    const sel=$('srcLangSelect');
+    if(sel&&[...sel.options].some(o=>o.value===best)) sel.value=best;
+  }
+}
+
 function afterLoad() {
+  detectAndSetSrcLang(subtitles);
   $('translateBtn').disabled = !subtitles.length;
   $('exportBtn').disabled    = !subtitles.length;
   $('clearBtn').disabled     = !subtitles.length;
@@ -1559,7 +1566,8 @@ function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 // ══════════════════════════════════════════════════════════════
 function renderCurrentView() {
   const area=$('editorArea'); area.innerHTML='';
-  const activeSubs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+  const _activeSubs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
+  const activeSubs=pillFilter?_activeSubs.filter(s=>charStatus(s.text)===(pillFilter==='warn'?'warn':'error')):_activeSubs;
   updatePills(activeSubs);
   updateBtBtn();
   $('editHint').textContent=subtitles.length?'Click any subtitle to edit':'';
@@ -1618,7 +1626,7 @@ function makeCard(sub,editable,lang) {
   const splitBtnHtml = lang==='source'
     ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`+
       `<button class="split-btn del-btn" onclick="event.stopPropagation();deleteSubtitle(${sub.index})" title="Delete this subtitle">✕</button>`
-    : '';
+    : `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`;
   card.innerHTML=
     `<div class="sub-idx">#${sub.index}</div>`+
     `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>`+
@@ -1727,14 +1735,26 @@ function setupDrop(dz) {
 // ══════════════════════════════════════════════════════════════
 function updatePills(subs) {
   const n=(subs||[]).length;
-  $('countPill').textContent=n+' subs';
   const warns=(subs||[]).filter(s=>charStatus(s.text)==='warn').length;
   const errs =(subs||[]).filter(s=>charStatus(s.text)==='error').length;
+  const cp=$('countPill'), wp=$('warnPill'), ep=$('errPill');
+  cp.textContent=n+' subs';
+  cp.style.cursor='pointer';
+  cp.style.userSelect='none';
+  if(pillFilter===null) cp.style.outline='2px solid var(--ink-3)'; else cp.style.outline='';
+  cp.onclick=()=>{ pillFilter=null; renderCurrentView(); };
   $('warnPill').style.display=warns?'':'none'; $('warnPill').textContent=warns+' warnings';
-  $('errPill').style.display =errs ?'':'none'; $('errPill').textContent =errs+' errors';
+  if(warns){ wp.style.cursor='pointer'; wp.style.userSelect='none';
+    if(pillFilter==='warn') wp.style.outline='2px solid oklch(0.42 0.13 75)'; else wp.style.outline='';
+    wp.onclick=()=>{ pillFilter=pillFilter==='warn'?null:'warn'; renderCurrentView(); };
+  }
+  $('errPill').style.display=errs?'':'none'; $('errPill').textContent=errs+' errors';
+  if(errs){ ep.style.cursor='pointer'; ep.style.userSelect='none';
+    if(pillFilter==='err') ep.style.outline='2px solid oklch(0.42 0.16 25)'; else ep.style.outline='';
+    ep.onclick=()=>{ pillFilter=pillFilter==='err'?null:'err'; renderCurrentView(); };
+  }
   const fb=$('fixBtn');
   if(fb) fb.style.display=errs>0?'flex':'none';
-  // Rail cue badge
   const badge=$('railCueBadge');
   if(badge){badge.textContent=n;badge.style.display=n?'flex':'none';}
 }
@@ -1838,7 +1858,7 @@ async function startTranslation() {
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
   for(let i=0;i<snap.length;i+=BATCH){
-    if(i>0){for(let c=Math.round(PAUSE/1000);c>0;c--){setStatus(`Translating… ${i}/${snap.length} — next batch in ${c}s…`);await sleep(1000);}}
+    if(i>0){ await sleep(PAUSE); }
     const batch=snap.slice(i,i+BATCH);
     // Include the last few already-translated subtitles as context so the
     // model maintains consistent terminology across batch boundaries.
@@ -1880,9 +1900,8 @@ async function startTranslation() {
         result.push({...s,text:txt});
       });
       const done=Math.min(i+BATCH,snap.length);
-      setStatus(`Translating… ${done} / ${snap.length}`);
       showProgress(Math.round(done/snap.length*100));
-      setTranslateBtn(true,`${done} / ${snap.length}`);
+      setTranslateBtn(true,'Translating…');
     }catch(e){setStatus('Error: '+e.message,'err');$('translateBtn').disabled=false;setTranslateBtn(false);hideProgress();return;}
   }
 
@@ -1890,7 +1909,9 @@ async function startTranslation() {
   $('exportBtn').disabled=false; $('translateBtn').disabled=false;
   setTranslateBtn(false); hideProgress();
   setStatus('Done — '+result.length+' subtitles','ok');
-  updateExportAllBtn(); rebuildTabs(); renderCurrentView();
+  updateExportAllBtn(); rebuildTabs();
+  if(activeTab!=='source') setView('compare');
+  renderCurrentView();
   updateHeaderLangs(); updateHeaderMeta(); saveStateLocally();
   tlRebuildLangPills();
 }
@@ -2617,7 +2638,7 @@ let tlActiveCue=-1;
 let tlLang='source';
 let tlPlayhead=0;
 let tlPlaying=false, tlPlayAudioCtx=null, tlPlaySrc=null, tlPlayStartedAt=0, tlPlayOffset=0;
-let tlIsCollapsed=false, tlIsMax=false;
+let tlIsCollapsed=true, tlIsMax=false;
 let tlViewMode='boxes';
 const TLC={
   bg:'#f5f4f0', rulerBg:'#eeecea', rulerText:'#9a9890',
@@ -2657,6 +2678,7 @@ function tlGetCanvasH(){ const w=$('tlScrollWrap'); return Math.max(70,w?w.clien
 
 async function tlLoadFile(file){
   if(!file) return;
+  if(tlIsCollapsed) { tlIsCollapsed=false; $('tlPanel').classList.remove('tl-collapsed'); $('tlToggleBtn').style.transform=''; }
   try {
     const isVideo=file.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(file.name);
     let blob=file;
@@ -3017,6 +3039,7 @@ updateHeaderLangs();
 updateHeaderMeta();
 if (!loadStateLocally()) renderCurrentView();
 tlRebuildLangPills();
+$('pasteArea').addEventListener('paste', ()=>{ setTimeout(parsePaste, 50); });
 checkAuth();
 </script>
 </body>
