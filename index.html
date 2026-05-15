@@ -1653,6 +1653,7 @@ function openEdit(card,sub,lang) {
   if(currentEditCard) commitEdit(currentEditCard);
   pushUndo();
   currentEditCard=card;
+  if(!tlIsCollapsed) tlSeek(tlSrtToSec(sub.start));
   card.classList.add('editing');
   const textEl=card.querySelector('.sub-text');
   const ta=el('textarea','edit-textarea');
