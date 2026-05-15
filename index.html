@@ -34,6 +34,21 @@
   --sans:'Geist',-apple-system,system-ui,sans-serif;
 }
 
+body.dark{
+  --bg:#1c1a17;
+  --panel:#242118;
+  --panel-2:#1e1c19;
+  --ink:#ede9e0;
+  --ink-2:#a89f94;
+  --ink-3:#6b6358;
+  --line:#2e2b25;
+  --line-2:#272420;
+  --accent-soft:oklch(0.22 0.05 28);
+  --accent-ink:oklch(0.80 0.14 28);
+  --ok-soft:oklch(0.18 0.04 155);
+  --warn-soft:oklch(0.18 0.05 75);
+  --err-soft:oklch(0.18 0.04 25);
+}
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;font-feature-settings:'ss01';letter-spacing:-0.005em}
 .app{display:flex;height:100vh;overflow:hidden}
@@ -428,6 +443,17 @@ input[type=file]{display:none}
     </div>
     <div class="modal-body">
 
+      <div class="sg-title">Appearance</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Dark mode</span>
+        <label class="toggle">
+          <input type="checkbox" id="darkToggle" onchange="setDarkMode(this.checked)">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+
+      <div class="sg-sep"></div>
       <div class="sg-title">Output Format</div>
       <div class="sg-row">
         <span class="sg-label">Max chars/line — Horizontal</span>
@@ -440,9 +466,6 @@ input[type=file]{display:none}
       <div class="sg-row">
         <span class="sg-label">Max lines/subtitle</span>
         <input class="sg-input" type="number" id="s-maxLines" min="1" max="6" value="2">
-      </div>
-      <div class="limit-box" id="limitBox" style="margin-top:6px">
-        <b>Max chars/line:</b> 46<br><b>Max lines/sub:</b> 2<br><b>Auto-split:</b> off
       </div>
 
       <div class="sg-sep"></div>
@@ -1103,7 +1126,8 @@ function populateSettingsModelSelect(provider) {
   });
 }
 function updateLimitBox() {
-  $('limitBox').innerHTML =
+  const el=$('limitBox'); if(!el) return;
+  el.innerHTML =
     `<b>Max chars/line:</b> ${maxLen()}<br>` +
     `<b>Max lines/sub:</b> ${settings.maxLinesPerSub}<br>` +
     `<b>Auto-split:</b> ${outputMode === 'vertical' ? 'on' : 'off'}`;
@@ -3034,6 +3058,16 @@ function tlMaximize(){
 }
 
 window.addEventListener('resize',()=>{ if(!tlIsCollapsed) tlRender(); });
+
+// ══════════════════════════════════════════════════════════════
+//  DARK MODE
+// ══════════════════════════════════════════════════════════════
+function setDarkMode(on) {
+  document.body.classList.toggle('dark', on);
+  localStorage.setItem('sub_dark', on ? '1' : '0');
+  const t = $('darkToggle'); if (t) t.checked = on;
+}
+(function(){ if(localStorage.getItem('sub_dark')==='1') setDarkMode(true); })();
 
 // ══════════════════════════════════════════════════════════════
 //  INIT
