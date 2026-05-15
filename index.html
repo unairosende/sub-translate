@@ -456,12 +456,6 @@ input[type=file]{display:none}
       </div>
 
       <div class="sg-sep"></div>
-      <div class="sg-title">View</div>
-      <div style="display:flex;gap:4px;margin-bottom:10px">
-        <button class="vbtn active" id="vbtn-list"    onclick="setView('list');saveSettings()" style="flex:1;border:1px solid var(--line);border-radius:6px">List</button>
-        <button class="vbtn"        id="vbtn-compare" onclick="setView('compare');saveSettings()" style="flex:1;border:1px solid var(--line);border-radius:6px">Compare</button>
-      </div>
-      <div class="sg-sep"></div>
       <div class="sg-title">Translation</div>
       <div class="sg-row">
         <span class="sg-label">Provider</span>
@@ -823,6 +817,10 @@ input[type=file]{display:none}
       </button>
       <button class="bt-btn" id="btBtn" style="display:none" onclick="startBackTranslation()">↩ Back-translate</button>
       <span class="edit-hint" id="editHint"></span>
+    </div>
+    <div class="toolbar-view">
+      <button class="vbtn active" id="vbtn-list"    onclick="setView('list')">List</button>
+      <button class="vbtn"        id="vbtn-compare" onclick="setView('compare')">Compare</button>
     </div>
   </div>
 
@@ -2565,6 +2563,8 @@ function splitSubtitle(idx) {
 function deleteSubtitle(idx) {
   pushUndo();
 
+  const scrollTops = [...document.querySelectorAll('.pane-scroll')].map(p => p.scrollTop);
+
   function removeAndRenumber(arr) {
     return arr.filter(s => s.index !== idx).map((s, i) => ({ ...s, index: i + 1 }));
   }
@@ -2575,6 +2575,9 @@ function deleteSubtitle(idx) {
   });
 
   rebuildTabs(); renderCurrentView(); updateHeaderMeta(); saveStateLocally();
+  [...document.querySelectorAll('.pane-scroll')].forEach((p, i) => {
+    if (scrollTops[i] !== undefined) p.scrollTop = scrollTops[i];
+  });
   setStatus(`Subtitle #${idx} deleted`, 'ok');
 }
 
