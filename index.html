@@ -2956,6 +2956,11 @@ function tlHit(x,y,W,H){
   let drag=null;
   function cvsCoord(e,c){ const r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)}; }
 
+  function scrollEditorToSub(subIndex) {
+    const card=document.querySelector(`.sub-card[data-idx="${subIndex}"]`);
+    if(card) card.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
   function attachCanvasEvents(){
     const c=$('tlCanvas'); if(!c||c._tlEventsAttached) return;
     c._tlEventsAttached=true;
@@ -2966,47 +2971,77 @@ function tlHit(x,y,W,H){
       if(hit){
         pushUndo();
         const subs=tlGetSubs(), s=subs[hit.idx]; if(!s) return;
-        drag={type:hit.type,idx:hit.idx,origStart:tlSrtToSec(s.start),origEnd:tlSrtToSec(s.end),anchorX:x};
+        drag={type:hit.type,idx:hit.idx,origStart:tlSrtToSec(s.start),origEnd:tlSrtToSec(s.end),anchorX:x,moved:false};
         tlActiveCue=hit.idx; tlRender(); tlUpdateInfoBar(); e.preventDefault();
       } else {
-        tlPlayhead=Math.max(0,Math.min(tlDuration||0,tlToSec(x,c.width)));
-        const subs=tlGetSubs();
-        tlActiveCue=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
-        tlRender(); tlUpdateInfoBar();
+        // Pan drag on empty area; click (no move) will set playhead on mouseup
+        const wrap=$('tlScrollWrap');
+        drag={type:'pan',clientX0:e.clientX,scrollLeft0:wrap?wrap.scrollLeft:0,canvasX:x,moved:false};
+        e.preventDefault();
       }
     });
 
     c.addEventListener('mousemove',e=>{
       const {x,y}=cvsCoord(e,c);
       if(drag){
-        const dt=tlToSec(x,c.width)-tlToSec(drag.anchorX,c.width);
-        const subs=tlGetSubs(), s=subs[drag.idx]; if(!s) return;
-        const SNAP=$('tlSnap')?.checked, SV=0.04, minDur=0.1;
-        const snap=v=>SNAP?Math.round(v/SV)*SV:v;
-        const prevEnd =drag.idx>0?tlSrtToSec(subs[drag.idx-1].end):-Infinity;
-        const nextStart=drag.idx<subs.length-1?tlSrtToSec(subs[drag.idx+1].start):Infinity;
-        if(drag.type==='move'){
-          const dur=drag.origEnd-drag.origStart;
-          let ns=snap(Math.max(prevEnd+SUB_MIN_GAP,drag.origStart+dt));
-          // clamp so end doesn't collide with next sub
-          if(ns+dur+SUB_MIN_GAP>nextStart) ns=nextStart-SUB_MIN_GAP-dur;
-          ns=Math.max(0,ns);
-          s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
-        } else if(drag.type==='left'){
-          const minStart=Math.max(0,prevEnd+SUB_MIN_GAP);
-          s.start=secToSrt(snap(Math.max(minStart,Math.min(drag.origEnd-minDur,drag.origStart+dt))));
+        if(drag.type==='pan'){
+          const dx=e.clientX-drag.clientX0;
+          if(Math.abs(dx)>4){ drag.moved=true; }
+          if(drag.moved){
+            const wrap=$('tlScrollWrap');
+            if(wrap) wrap.scrollLeft=drag.scrollLeft0-dx;
+            c.style.cursor='grabbing';
+          }
         } else {
-          const maxEnd=nextStart-SUB_MIN_GAP;
-          s.end=secToSrt(snap(Math.min(maxEnd,Math.max(drag.origStart+minDur,drag.origEnd+dt))));
+          drag.moved=true;
+          const dt=tlToSec(x,c.width)-tlToSec(drag.anchorX,c.width);
+          const subs=tlGetSubs(), s=subs[drag.idx]; if(!s) return;
+          const SNAP=$('tlSnap')?.checked, SV=0.04, minDur=0.1;
+          const snap=v=>SNAP?Math.round(v/SV)*SV:v;
+          const prevEnd =drag.idx>0?tlSrtToSec(subs[drag.idx-1].end):-Infinity;
+          const nextStart=drag.idx<subs.length-1?tlSrtToSec(subs[drag.idx+1].start):Infinity;
+          if(drag.type==='move'){
+            const dur=drag.origEnd-drag.origStart;
+            let ns=snap(Math.max(prevEnd+SUB_MIN_GAP,drag.origStart+dt));
+            if(ns+dur+SUB_MIN_GAP>nextStart) ns=nextStart-SUB_MIN_GAP-dur;
+            ns=Math.max(0,ns);
+            s.start=secToSrt(ns); s.end=secToSrt(ns+dur);
+          } else if(drag.type==='left'){
+            const minStart=Math.max(0,prevEnd+SUB_MIN_GAP);
+            s.start=secToSrt(snap(Math.max(minStart,Math.min(drag.origEnd-minDur,drag.origStart+dt))));
+          } else {
+            const maxEnd=nextStart-SUB_MIN_GAP;
+            s.end=secToSrt(snap(Math.min(maxEnd,Math.max(drag.origStart+minDur,drag.origEnd+dt))));
+          }
+          tlRender(); tlUpdateInfoBar(); renderCurrentView();
         }
-        tlRender(); tlUpdateInfoBar(); renderCurrentView();
       } else {
         const hit=tlHit(x,y,c.width,c.height);
         c.style.cursor=hit?(hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize')):'crosshair';
       }
     });
 
-    document.addEventListener('mouseup',()=>{ if(!drag) return; drag=null; saveStateLocally(); });
+    document.addEventListener('mouseup',e=>{
+      if(!drag) return;
+      if(drag.type==='pan'){
+        if(!drag.moved){
+          // plain click on empty area → set playhead
+          tlPlayhead=Math.max(0,Math.min(tlDuration||0,tlToSec(drag.canvasX,c.width)));
+          const subs=tlGetSubs();
+          tlActiveCue=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+          tlRender(); tlUpdateInfoBar();
+        }
+        c.style.cursor='crosshair';
+      } else if(!drag.moved){
+        // click on subtitle block → scroll editor to that card
+        const subs=tlGetSubs(), s=subs[drag.idx];
+        if(s) scrollEditorToSub(s.index);
+        saveStateLocally();
+      } else {
+        saveStateLocally();
+      }
+      drag=null;
+    });
 
     c.addEventListener('wheel',e=>{
       e.preventDefault();
