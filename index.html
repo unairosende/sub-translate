@@ -1028,8 +1028,55 @@ document.addEventListener('keydown', e => {
     // ↓ go to end
     e.preventDefault();
     tlSeek(tlDuration || 0);
+  } else if (e.key === 'j' || e.key === 'J') {
+    e.preventDefault(); jklPlay(-1);
+  } else if (e.key === 'k' || e.key === 'K') {
+    e.preventDefault(); tlStopPlay(); jklLastKey=''; jklSpeed=1;
+  } else if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault(); jklPlay(1);
   }
 });
+
+let jklSpeed=1, jklLastKey='', jklLastKeyTime=0;
+function jklPlay(dir) {
+  const now=Date.now();
+  const sameKey=(dir===1&&jklLastKey==='L')||(dir===-1&&jklLastKey==='J');
+  if(sameKey&&now-jklLastKeyTime<500) jklSpeed=Math.min(16,jklSpeed*2);
+  else jklSpeed=1;
+  jklLastKey=dir===1?'L':'J'; jklLastKeyTime=now;
+  tlStopPlay();
+  tlPlaying=true; $('tlPlayBtn').innerHTML='⏸';
+  if(dir===1&&tlAudioBuf){
+    const actx=new(window.AudioContext||window.webkitAudioContext)();
+    tlPlayAudioCtx=actx;
+    const src=actx.createBufferSource();
+    src.buffer=tlAudioBuf; src.playbackRate.value=jklSpeed; src.connect(actx.destination);
+    tlPlayOffset=tlPlayhead; tlPlayStartedAt=actx.currentTime;
+    src.start(0,Math.max(0,tlPlayOffset)); tlPlaySrc=src;
+    src.onended=()=>{ if(tlPlaying) tlStopPlay(); };
+    (function tick(){
+      if(!tlPlaying) return;
+      tlPlayhead=Math.min(tlDuration,tlPlayOffset+(tlPlayAudioCtx.currentTime-tlPlayStartedAt)*jklSpeed);
+      const subs=tlGetSubs(), ci=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+      if(ci>=0&&ci!==tlActiveCue){tlActiveCue=ci;tlScrollToCue(ci);}
+      tlRender(); tlUpdateInfoBar(); requestAnimationFrame(tick);
+    })();
+  } else {
+    // Reverse (or no audio forward) — time scrub only
+    let last=null;
+    (function tick(t){
+      if(!tlPlaying) return;
+      if(last!==null){
+        tlPlayhead=Math.max(0,Math.min(tlDuration,tlPlayhead+dir*(t-last)/1000*jklSpeed));
+        const subs=tlGetSubs(), ci=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+        if(ci>=0&&ci!==tlActiveCue){tlActiveCue=ci;tlScrollToCue(ci);}
+        tlRender(); tlUpdateInfoBar();
+        if(tlPlayhead<=0||tlPlayhead>=tlDuration){tlStopPlay();return;}
+      }
+      last=t; requestAnimationFrame(tick);
+    })();
+  }
+}
 
 function tlSeek(t) {
   if (tlPlaying) tlStopPlay();
@@ -2967,6 +3014,11 @@ function tlHit(x,y,W,H){
 
     c.addEventListener('mousedown',e=>{
       const {x,y}=cvsCoord(e,c);
+      // Check playhead flag hit first (flag area: y<15, x within [px-2, px+13])
+      const phPx=tlToPx(tlPlayhead,c.width);
+      if(y<=15&&x>=phPx-2&&x<=phPx+13){
+        drag={type:'playhead',moved:false}; e.preventDefault(); return;
+      }
       const hit=tlHit(x,y,c.width,c.height);
       if(hit){
         pushUndo();
@@ -2984,9 +3036,16 @@ function tlHit(x,y,W,H){
     c.addEventListener('mousemove',e=>{
       const {x,y}=cvsCoord(e,c);
       if(drag){
-        if(drag.type==='pan'){
+        if(drag.type==='playhead'){
+          drag.moved=true;
+          tlPlayhead=Math.max(0,Math.min(tlDuration||0,tlToSec(x,c.width)));
+          const subs=tlGetSubs();
+          tlActiveCue=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
+          tlRender(); tlUpdateInfoBar();
+          c.style.cursor='col-resize';
+        } else if(drag.type==='pan'){
           const dx=e.clientX-drag.clientX0;
-          if(Math.abs(dx)>4){ drag.moved=true; }
+          if(Math.abs(dx)>4) drag.moved=true;
           if(drag.moved){
             const wrap=$('tlScrollWrap');
             if(wrap) wrap.scrollLeft=drag.scrollLeft0-dx;
@@ -3016,20 +3075,29 @@ function tlHit(x,y,W,H){
           tlRender(); tlUpdateInfoBar(); renderCurrentView();
         }
       } else {
-        const hit=tlHit(x,y,c.width,c.height);
-        c.style.cursor=hit?(hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize')):'crosshair';
+        // Cursor hints
+        const phPx=tlToPx(tlPlayhead,c.width);
+        if(y<=15&&x>=phPx-2&&x<=phPx+13) c.style.cursor='col-resize';
+        else {
+          const hit=tlHit(x,y,c.width,c.height);
+          c.style.cursor=hit?(hit.type==='move'?'grab':(hit.type==='left'?'w-resize':'e-resize')):'crosshair';
+        }
       }
     });
 
     document.addEventListener('mouseup',e=>{
       if(!drag) return;
-      if(drag.type==='pan'){
+      if(drag.type==='playhead'){
+        if(tlActiveCue>=0) tlScrollToCue(tlActiveCue);
+        c.style.cursor='col-resize';
+      } else if(drag.type==='pan'){
         if(!drag.moved){
-          // plain click on empty area → set playhead
+          // plain click on empty area → set playhead + scroll editor
           tlPlayhead=Math.max(0,Math.min(tlDuration||0,tlToSec(drag.canvasX,c.width)));
           const subs=tlGetSubs();
           tlActiveCue=subs.findIndex(s=>tlSrtToSec(s.start)<=tlPlayhead&&tlSrtToSec(s.end)>=tlPlayhead);
           tlRender(); tlUpdateInfoBar();
+          if(tlActiveCue>=0) scrollEditorToSub(subs[tlActiveCue].index);
         }
         c.style.cursor='crosshair';
       } else if(!drag.moved){
