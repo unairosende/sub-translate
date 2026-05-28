@@ -3181,6 +3181,7 @@ updateHeaderMeta();
 if (!loadStateLocally()) renderCurrentView();
 tlRebuildLangPills();
 $('pasteArea').addEventListener('paste', ()=>{ setTimeout(parsePaste, 50); });
+document.addEventListener('mousedown', e=>{ if(currentEditCard&&!currentEditCard.contains(e.target)) commitEdit(currentEditCard); });
 checkAuth();
 </script>
 </body>
