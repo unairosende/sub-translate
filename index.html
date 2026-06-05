@@ -839,6 +839,7 @@ input[type=file]{display:none}
         Fix
       </button>
       <button class="bt-btn" id="btBtn" style="display:none" onclick="startBackTranslation()">↩ Back-translate</button>
+      <button class="bt-btn" id="cleanBtn" style="display:none" onclick="startCleanTranscript()">✦ Clean transcript</button>
       <span class="edit-hint" id="editHint"></span>
     </div>
     <div class="toolbar-view">
@@ -1639,6 +1640,7 @@ function renderCurrentView() {
   const activeSubs=pillFilter?_activeSubs.filter(s=>charStatus(s.text)===(pillFilter==='warn'?'warn':'error')):_activeSubs;
   updatePills(activeSubs);
   updateBtBtn();
+  updateCleanBtn();
   $('editHint').textContent=subtitles.length?'Click any subtitle to edit':'';
 
   if(viewMode==='compare'&&activeTab!=='source'&&translations[activeTab]) {
@@ -2058,6 +2060,10 @@ function updateBtBtn() {
   const has=!!backTranslations[activeTab];
   btn.className='bt-btn'+(has?' on':''); btn.textContent=has?'↩ Hide back-trans':'↩ Back-translate';
 }
+function updateCleanBtn() {
+  const btn=$('cleanBtn'); if(!btn) return;
+  btn.style.display=(activeTab==='source'&&subtitles.length)?'flex':'none';
+}
 function wordDiff(source,backTrans) {
   const tokA=source.replace(/\n/g,' ').split(/\s+/).filter(Boolean);
   const tokB=backTrans.replace(/\n/g,' ').split(/\s+/).filter(Boolean);
@@ -2104,6 +2110,59 @@ async function startBackTranslation() {
   backTranslations[lang]=result;
   hideProgress(); setStatus('Back-translation done — differences highlighted in cards','ok');
   btn.disabled=false; renderCurrentView();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLEAN TRANSCRIPT (remove speech disfluencies via AI)
+// ══════════════════════════════════════════════════════════════
+async function startCleanTranscript() {
+  if(!subtitles.length) return;
+  const btn=$('cleanBtn'); btn.disabled=true;
+  btn.innerHTML='<span class="suggest-spinner"></span> Cleaning…';
+  showProgressIndeterminate(); setStatus('Cleaning transcript…');
+  pushUndo();
+  const snap=[...subtitles], result=[];
+  const BATCH=window._providerBatch||30, PAUSE=window._providerPause||2000;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const srcLang=getSrcLang()==='Auto-detect'?'the source language':getSrcLang();
+
+  for(let i=0;i<snap.length;i+=BATCH){
+    if(i>0) await sleep(PAUSE);
+    const batch=snap.slice(i,i+BATCH);
+    const prompt=[
+      `You are a professional subtitle editor. Clean the following subtitles by removing speech disfluencies.`,
+      ``,
+      `REMOVE:`,
+      `• Filler sounds: "uh", "um", "eh", "eeh", "ahm", "hmm", "er", "ah", "mm"`,
+      `• Repeated words: "I I think" → "I think", "and then and then" → "and then"`,
+      `• False starts: "I was going — I think it was Tuesday" → "I think it was Tuesday"`,
+      `• Mid-sentence self-corrections (keep the corrected version, drop the false start)`,
+      ``,
+      `PRESERVE:`,
+      `• All actual content and meaning`,
+      `• Line breaks (use \\n)`,
+      `• If a subtitle is already clean, return it unchanged`,
+      `• Do NOT paraphrase or summarise — only remove disfluencies`,
+      ``,
+      `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
+      ``,
+      `SOURCE (${srcLang}):`,
+      JSON.stringify(batch.map(s=>s.text))
+    ].join('\n');
+    try{
+      const raw=await callProvider(prompt);
+      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
+      batch.forEach((s,j)=>result.push({...s,text:(typeof parsed[j]==='string'?parsed[j]:s.text)}));
+      showProgress(Math.round(Math.min(i+BATCH,snap.length)/snap.length*100));
+    }catch(e){
+      setStatus('Error: '+e.message,'err');
+      btn.disabled=false; btn.textContent='✦ Clean transcript'; hideProgress(); return;
+    }
+  }
+  subtitles=result;
+  hideProgress(); setStatus('Transcript cleaned — '+result.length+' subtitles','ok');
+  btn.disabled=false; btn.textContent='✦ Clean transcript';
+  renderCurrentView(); updateHeaderMeta(); saveStateLocally();
 }
 
 // ══════════════════════════════════════════════════════════════
