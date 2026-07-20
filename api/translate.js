@@ -14,19 +14,31 @@ export default async function handler(req, res) {
 
     if (provider === 'gemini') {
       if (!geminiKey) return res.status(500).json({ error: 'Gemini key not configured' });
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 16000 } }) }
-      );
-      const data = await r.json();
-      if (data.error) return res.status(r.status).json({ error: data.error.message, is429: r.status === 429 || data.error.code === 429 || data.error.status === 'RESOURCE_EXHAUSTED' });
+      const GEMINI_FALLBACK = 'gemini-2.5-flash';
+      const geminiModelsToTry = model !== GEMINI_FALLBACK ? [model, GEMINI_FALLBACK] : [model];
+      let data, r, usedModel;
+      for (const tryModel of geminiModelsToTry) {
+        r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${tryModel}:generateContent?key=${geminiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 16000 } }) }
+        );
+        data = await r.json();
+        usedModel = tryModel;
+        // Retry with fallback only on model-not-found errors
+        if (data.error && (data.error.status === 'NOT_FOUND' || (data.error.message || '').includes('not found'))) {
+          console.warn(`[translate] model ${tryModel} not found, trying fallback`);
+          continue;
+        }
+        break;
+      }
+      if (data.error) return res.status(r.status).json({ error: data.error.message, is429: r.status === 429 || data.error.code === 429 || data.error.status === 'RESOURCE_EXHAUSTED', usedModel });
       // Skip thinking parts (thought:true) — find the actual text response
       const parts = data?.candidates?.[0]?.content?.parts || [];
       const textPart = parts.find(p => !p.thought) || parts[0];
       rawText = textPart?.text || '[]';
-      console.log('[translate] parts count:', parts.length, '| rawText preview:', rawText?.slice(0,200));
+      console.log('[translate] model:', usedModel, '| parts count:', parts.length, '| rawText preview:', rawText?.slice(0,200));
     } else {
       const urls   = { groq: 'https://api.groq.com/openai/v1/chat/completions',
                        openrouter: 'https://openrouter.ai/api/v1/chat/completions',
