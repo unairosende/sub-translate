@@ -114,7 +114,7 @@ vercel.json         — Vercel config
 - Commit after every logical change, never batch unrelated work
 - Short imperative summary + bullet points per change
 - Always append: `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
-- Push via GitHub Desktop (HTTPS auth lives there)
+- Push via `git push` (HTTPS credential helper configured)
 
 ## GateGuard compliance
 
