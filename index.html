@@ -810,7 +810,7 @@ input[type=file]{display:none}
 
   <!-- ── Custom prompt instructions ── -->
   <div class="s-sec">
-    <div class="s-title">Extra instructions <span style="font-weight:400;color:var(--ink-3);font-size:10px">· added to every translation prompt</span></div>
+    <div class="s-title">Extra instructions <span style="font-weight:400;color:var(--ink-3);font-size:10px">· added to every translation &amp; clean-transcript prompt</span></div>
     <textarea id="customPromptInstructions" class="paste-area" rows="3" placeholder="e.g. &quot;Speaker is female.&quot; &quot;Formal tone.&quot; &quot;Keep 'AI' untranslated.&quot;" style="font-size:11.5px;resize:vertical;min-height:52px" oninput="saveStateLocally()"></textarea>
   </div>
 
@@ -2208,6 +2208,7 @@ async function startCleanTranscript() {
   for(let i=0;i<snap.length;i+=BATCH){
     if(i>0) await sleep(PAUSE);
     const batch=snap.slice(i,i+BATCH);
+    const extraInstructions=($('customPromptInstructions')?.value||'').trim();
     const prompt=[
       `You are a professional subtitle editor. Clean the following subtitles by removing speech disfluencies.`,
       ``,
@@ -2223,6 +2224,7 @@ async function startCleanTranscript() {
       `• If a subtitle is already clean, return it unchanged`,
       `• Do NOT paraphrase or summarise — only remove disfluencies`,
       ``,
+      ...(extraInstructions?[`ADDITIONAL INSTRUCTIONS (apply to every subtitle):`,extraInstructions,``]:[]),
       `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
       ``,
       `SOURCE (${srcLang}):`,
