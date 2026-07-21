@@ -2024,6 +2024,7 @@ async function startTranslation() {
       `• Max ${maxLen()} characters per line`,
       `• Max 2 lines per subtitle — use \\n to split long lines`,
       ``,
+      ...SUBTITLE_TIMING_RULES,
       `TRANSLATION RULES:`,
       `• Translate LITERALLY and EXACTLY — word for word as much as the target language allows`,
       `• Preserve the original sentence structure and word order whenever grammatically possible in ${lang}`,
@@ -2073,8 +2074,18 @@ async function startTranslation() {
 //  FIX OVERLENGTH
 // ══════════════════════════════════════════════════════════════
 // Good break points for subtitle line splitting
-const NATURAL_BREAK_BEFORE=/^(and|but|or|so|yet|nor|for|because|although|while|when|where|which|that|who|however|therefore|thus|then|after|before|since|though|if|as|once|until|unless|whether|although|whereas)$/i;
+const NATURAL_BREAK_BEFORE=/^(and|but|or|so|yet|nor|for|because|although|while|when|where|which|that|who|however|therefore|thus|then|after|before|since|though|if|as|once|until|unless|whether|although|whereas|y|e|o|u|ni|pero|sino|porque|pues|aunque|mientras|cuando|donde|que|quien|quienes|si|como|para|ya|entonces|después|antes|desde|hasta|además)$/i;
 const PUNCT_AFTER_WORD=/[,;:!?\-—]$/;
+const SENT_END_WORD=/[.!?…。！？]["'»)\]]?$/;
+
+// Shared segmentation policy — injected into every AI prompt that reflows subtitles.
+const SUBTITLE_TIMING_RULES=[
+  `CRITICAL INSTRUCTION FOR SUBTITLE TIMING: Prioritize meaning and speech tempo over uniform line length.`,
+  `• Break subtitles at punctuation marks (periods, commas) or conjunctions (and, but, because).`,
+  `• Do not awkwardly split sentences across subtitle blocks (e.g., do not end a block with "I want you to" and start the next with "focus").`,
+  `• Keep related thoughts together to ensure readability.`,
+  ``,
+];
 
 function reflowText(text,limit) {
   const flat=text.replace(/\r?\n|\r/g,' ').replace(/  +/g,' ').trim();
@@ -2224,6 +2235,7 @@ async function startCleanTranscript() {
       `• If a subtitle is already clean, return it unchanged`,
       `• Do NOT paraphrase or summarise — only remove disfluencies`,
       ``,
+      ...SUBTITLE_TIMING_RULES,
       ...(extraInstructions?[`ADDITIONAL INSTRUCTIONS (apply to every subtitle):`,extraInstructions,``]:[]),
       `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
       ``,
@@ -2600,17 +2612,44 @@ function alignTextToWords(text, words) {
   return ensureGaps(raw);
 }
 
+// How good a cue break after `word` is. Higher wins.
+function breakScore(word,next) {
+  if(SENT_END_WORD.test(word)) return 3;                                        // sentence end
+  if(PUNCT_AFTER_WORD.test(word)) return 2;                                     // comma / clause end
+  if(next&&NATURAL_BREAK_BEFORE.test(next.replace(/[^\p{L}']/gu,''))) return 1;  // before a conjunction
+  return 0;
+}
+
 function chunkTextToSubs(text,maxChars,maxLines) {
   const words=text.replace(/\n+/g,' ').split(/\s+/).filter(Boolean);
-  const chunks=[]; let lines=[''];
-  for(const word of words){
-    const cur=lines[lines.length-1];
-    if(!cur){ lines[lines.length-1]=word; }
-    else if(cur.length+1+word.length<=maxChars){ lines[lines.length-1]=cur+' '+word; }
-    else if(lines.length<maxLines){ lines.push(word); }
-    else{ chunks.push(lines.join('\n')); lines=[word]; }
+  const cap=maxChars*Math.min(2,Math.max(1,maxLines)); // chars a full cue can hold (2-line style-guide cap)
+  const fits=s=>reflowText(s,maxChars).split('\n').every(l=>l.length<=maxChars);
+  const chunks=[]; let i=0;
+  while(i<words.length){
+    // How many words physically fit in one cue
+    let end=i,len=0;
+    while(end<words.length){
+      const add=(end===i?0:1)+words[end].length;
+      if(len+add>cap) break;
+      len+=add; end++;
+    }
+    if(end===i) end=i+1; // single word longer than a whole cue
+    // cap alone isn't enough — the word boundaries must also allow a legal 2-line wrap
+    while(end>i+1&&!fits(words.slice(i,end).join(' '),maxChars)) end--;
+    // Pull the break back to the nearest meaning boundary, never past half the cue
+    if(end<words.length){
+      const min=i+Math.max(0,Math.ceil((end-i)*0.5)-1); // a break after word j keeps j-i+1 words
+      let best=end,bestScore=0;
+      for(let j=end-1;j>=min;j--){
+        const s=breakScore(words[j],words[j+1]);
+        if(s>bestScore){bestScore=s;best=j+1;}
+        if(s===3) break; // latest sentence end wins outright
+      }
+      end=best;
+    }
+    chunks.push(reflowText(words.slice(i,end).join(' '),maxChars));
+    i=end;
   }
-  if(lines.some(l=>l)) chunks.push(lines.join('\n'));
   return chunks.filter(Boolean);
 }
 
