@@ -1,5 +1,10 @@
+import { requireUser } from './_auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   const { prompt, model = 'gemini-2.5-flash', provider = 'gemini' } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });

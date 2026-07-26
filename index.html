@@ -6,7 +6,7 @@
 <title>sub.translate — Subtitle Translator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.27.0/dist/pocketbase.umd.js"></script>
 <style>
 /* ── Reset ── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -485,7 +485,7 @@ input[type=file]{display:none}
     <div class="login-title">Studio Access</div>
     <div class="login-sub">Sign in with your organisation account</div>
     <div class="login-domain">@keweke.com</div>
-    <div id="googleBtnContainer"></div>
+    <button id="googleSignInBtn" class="btn btn-primary" onclick="signIn()">Sign in with Google</button>
     <div id="authError" class="auth-error" style="display:none"></div>
   </div>
 </div>
@@ -952,65 +952,80 @@ input[type=file]{display:none}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════
-//  AUTH — Google Sign-In restricted to @keweke.com
+//  AUTH — PocketBase (Google OAuth), restricted to @keweke.com
 // ══════════════════════════════════════════════════════════════
-const GOOGLE_CLIENT_ID = '936707757789-f0le8ag3g7gi2gr70mndugnibiopu51i.apps.googleusercontent.com';
-const ALLOWED_DOMAIN   = 'keweke.com';
-const AUTH_KEY         = 'sub_translate_auth';
+const PB_URL         = 'https://api.captio.studio';
+const ALLOWED_DOMAIN = 'keweke.com';
+const pb = new PocketBase(PB_URL);
 
-function checkAuth() {
-  try {
-    const stored = sessionStorage.getItem(AUTH_KEY);
-    if (stored) {
-      const { email, exp } = JSON.parse(stored);
-      if (email.endsWith('@' + ALLOWED_DOMAIN) && Date.now() / 1000 < exp) {
-        showApp(email); return;
-      }
-    }
-  } catch {}
+// Signed-in user's email, or '' when signed out.
+function authEmail() {
+  const rec = pb.authStore.record || pb.authStore.model;
+  return rec?.email || '';
+}
+
+// Authorization header for our own /api/* routes.
+function authHeaders(extra = {}) {
+  return { ...extra, Authorization: pb.authStore.token };
+}
+
+// Transcribes through our own backend so the ElevenLabs key stays server-side.
+// ponytail: Vercel caps request bodies at ~4.5 MB, so long audio still needs the
+// NAS upload path — surfaced as a clear 413 message rather than a silent failure.
+async function transcribeAudio(audioBlob, filename, { language } = {}) {
+  const fd = new FormData();
+  fd.append('file', audioBlob, filename.replace(/\.[^.]+$/, '.mp3'));
+  fd.append('model_id', settings.elModel || 'scribe_v1');
+  fd.append('timestamps_granularity', 'word');
+  fd.append('tag_audio_events', 'false');
+  if (language && language !== 'auto') fd.append('language_code', language);
+
+  const resp = await fetch('/api/transcribe', {
+    method: 'POST',
+    headers: { Authorization: pb.authStore.token },   // no Content-Type: the browser sets the boundary
+    body: fd,
+  });
+  if (resp.status === 413) throw new Error('Audio too large to upload (server limit ~4.5 MB). Export a smaller audio file or trim the clip.');
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.detail?.message || err?.detail || err?.error || 'HTTP ' + resp.status);
+  }
+  return resp.json();
+}
+
+async function checkAuth() {
+  if (pb.authStore.isValid) {
+    try {
+      await pb.collection('users').authRefresh();
+      showApp(authEmail());
+      return;
+    } catch { pb.authStore.clear(); }
+  }
   showLogin();
 }
 
 function showLogin() {
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('mainApp').style.display = 'none';
-  // Render Google button once GIS is ready
-  if (window.google?.accounts?.id) initGoogleAuth();
-  else window.addEventListener('load', initGoogleAuth);
 }
 
-function initGoogleAuth() {
-  if (!window.google?.accounts?.id) {
-    document.getElementById('authError').textContent = 'Could not load Google Sign-In. Check your connection.';
-    document.getElementById('authError').style.display = 'block';
-    return;
-  }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
-  google.accounts.id.renderButton(
-    document.getElementById('googleBtnContainer'),
-    { theme: 'filled_black', size: 'large', shape: 'rectangular', text: 'signin_with', width: 260 }
-  );
-  google.accounts.id.prompt();
-}
-
-function handleCredentialResponse(response) {
+async function signIn() {
+  const err = document.getElementById('authError');
+  const btn = document.getElementById('googleSignInBtn');
+  err.style.display = 'none';
+  btn.disabled = true;
   try {
-    // Decode JWT payload (base64url)
-    const b64 = response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-    const { email, exp, name } = JSON.parse(decodeURIComponent(escape(atob(b64))));
-    if (email && email.endsWith('@' + ALLOWED_DOMAIN)) {
-      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, exp, name }));
-      showApp(email);
-    } else {
-      const err = document.getElementById('authError');
-      err.textContent = `Access restricted to @${ALLOWED_DOMAIN} accounts. You signed in as: ${email}`;
-      err.style.display = 'block';
-      google.accounts.id.disableAutoSelect();
-    }
-  } catch(e) {
-    const err = document.getElementById('authError');
-    err.textContent = 'Authentication error: ' + e.message;
+    await pb.collection('users').authWithOAuth2({ provider: 'google' });
+    showApp(authEmail());
+  } catch (e) {
+    pb.authStore.clear();
+    // The backend hook rejects accounts outside the organisation domain.
+    err.textContent = /restricted/i.test(e?.message || '')
+      ? `Access restricted to @${ALLOWED_DOMAIN} accounts.`
+      : 'Sign-in failed: ' + (e?.message || 'unknown error');
     err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -1142,8 +1157,7 @@ function tlSeek(t) {
 }
 
 function signOut() {
-  sessionStorage.removeItem(AUTH_KEY);
-  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+  pb.authStore.clear();
   location.reload();
 }
 
@@ -1232,7 +1246,7 @@ async function checkGeminiModelHealth() {
   warn.style.display = 'none';
   if ($('s-transProvider').value !== 'gemini') return;
   try {
-    const r = await fetch('/api/models');
+    const r = await fetch('/api/models', { headers: authHeaders() });
     if (!r.ok) return;
     const { models } = await r.json();
     if (!Array.isArray(models)) return;
@@ -1980,7 +1994,7 @@ async function callProvider(prompt,_key,retries=3) {
   const model = settings.translationModel || PROVIDERS[activeProvider]?.models[0]?.id;
   for(let attempt=0;attempt<retries;attempt++){
     try{
-      const resp=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+      const resp=await fetch('/api/translate',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
         body:JSON.stringify({prompt,model,provider:activeProvider})});
       const data=await resp.json();
       if(data.error){const e=new Error(data.error);e.is429=data.is429||resp.status===429;throw e;}
@@ -2381,25 +2395,7 @@ async function startTranscription() {
     setXcStatus('Sending to ElevenLabs Scribe…');
     const lang=$('xcSourceLang').value;
 
-    // Fetch key then upload directly to ElevenLabs — avoids Vercel's 4.5 MB proxy limit
-    const keyResp=await fetch('/api/el-key');
-    if(!keyResp.ok) throw new Error('Could not load transcription key');
-    const {key:elKey}=await keyResp.json();
-
-    const fd=new FormData();
-    fd.append('file',audioBlob,xcFile.name.replace(/\.[^.]+$/,'.mp3'));
-    fd.append('model_id',settings.elModel||'scribe_v1');
-    fd.append('timestamps_granularity','word');
-    fd.append('tag_audio_events','false');
-    if(lang!=='auto') fd.append('language_code',lang);
-
-    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{
-      method:'POST',
-      headers:{'xi-api-key':elKey},
-      body:fd,
-    });
-    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
-    const data=await resp.json();
+    const data=await transcribeAudio(audioBlob,xcFile.name,{language:lang});
 
     let subs;
     if(data.words&&data.words.length) subs=wordsToSubs(data.words);
@@ -2558,18 +2554,8 @@ async function startAlignment() {
     const isVideo=alignAudioFile.type.startsWith('video/')||/\.(mp4|mov|mkv|webm)$/i.test(alignAudioFile.name);
     if(isVideo){setAlignStatus('Extracting audio…');audioBlob=await extractAudioFromVideo(alignAudioFile);}
 
-    const keyResp=await fetch('/api/el-key');
-    if(!keyResp.ok) throw new Error('Could not load transcription key');
-    const {key:elKey}=await keyResp.json();
-    const fd=new FormData();
-    fd.append('file',audioBlob,alignAudioFile.name.replace(/\.[^.]+$/,'.mp3'));
-    fd.append('model_id',settings.elModel||'scribe_v1');
-    fd.append('timestamps_granularity','word');
-    fd.append('tag_audio_events','false');
-    // No language_code — auto-detect so text and audio can be in different languages
-    const resp=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':elKey},body:fd});
-    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err?.detail?.message||err?.detail||'HTTP '+resp.status);}
-    const data=await resp.json();
+    // No language — auto-detect so text and audio can be in different languages
+    const data=await transcribeAudio(audioBlob,alignAudioFile.name);
     const words=(data.words||[]).filter(w=>!w.type||w.type==='word');
     if(!words.length) throw new Error('No word timestamps returned from transcription');
 

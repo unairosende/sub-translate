@@ -1,6 +1,10 @@
+import { requireUser } from './_auth.js';
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
+
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   const geminiKey = process.env.gemini_key;
   if (!geminiKey) return res.status(500).json({ error: 'Gemini key not configured' });
