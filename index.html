@@ -2038,7 +2038,7 @@ async function startTranslation() {
       `• Max ${maxLen()} characters per line`,
       `• Max 2 lines per subtitle — use \\n to split long lines`,
       ``,
-      ...SUBTITLE_TIMING_RULES,
+      ...TRANSLATION_LINE_RULES,
       `TRANSLATION RULES:`,
       `• Translate LITERALLY and EXACTLY — word for word as much as the target language allows`,
       `• Preserve the original sentence structure and word order whenever grammatically possible in ${lang}`,
@@ -2049,7 +2049,7 @@ async function startTranslation() {
       ``,
       ...(extraInstructions?[`ADDITIONAL INSTRUCTIONS (apply to every subtitle):`,extraInstructions,``]:[]),
       ...(prevCtx?[`PREVIOUS SUBTITLES (already translated — use for terminology consistency):`,prevCtx,``]:[]),
-      `Return ONLY a JSON array of ${batch.length} strings in the same order. No markdown, no commentary.`,
+      `Return ONLY a JSON array of exactly ${batch.length} strings — one per input subtitle, same order, same count. No markdown, no commentary.`,
       ``,
       `SOURCE:`,
       JSON.stringify(batch.map(s=>s.text))
@@ -2100,6 +2100,18 @@ const PUNCT_AFTER_WORD=/[,;:!?\-—]$/;
 const SENT_END_WORD=/[.!?…。！？]["'»)\]]?$/;
 
 // Shared segmentation policy — injected into every AI prompt that reflows subtitles.
+// Re-segmentation rules belong to transcribe/clean-transcript, where cues are
+// being created. When translating, the cue list and its timecodes are already
+// fixed — asking the model to "break at punctuation" makes it split cues and
+// return more entries than it was given. Line breaks inside a cue are fine.
+const TRANSLATION_LINE_RULES=[
+  `CRITICAL — THE SUBTITLE COUNT IS FIXED: return exactly one translation per input subtitle, in the same order.`,
+  `• NEVER split one subtitle into two entries, and NEVER merge two subtitles into one.`,
+  `• If a translation is too long, break it into at most 2 lines using \\n INSIDE that same entry.`,
+  `• Put that line break at punctuation or a conjunction — never mid-phrase.`,
+  ``,
+];
+
 const SUBTITLE_TIMING_RULES=[
   `CRITICAL INSTRUCTION FOR SUBTITLE TIMING: Prioritize meaning and speech tempo over uniform line length.`,
   `• Break subtitles at punctuation marks (periods, commas) or conjunctions (and, but, because).`,
