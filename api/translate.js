@@ -42,8 +42,14 @@ export default async function handler(req, res) {
       // Skip thinking parts (thought:true) — find the actual text response
       const parts = data?.candidates?.[0]?.content?.parts || [];
       const textPart = parts.find(p => !p.thought) || parts[0];
-      rawText = textPart?.text || '[]';
+      rawText = textPart?.text || '';
       console.log('[translate] model:', usedModel, '| parts count:', parts.length, '| rawText preview:', rawText?.slice(0,200));
+      // An empty response is a failure, not an empty translation. Saying so
+      // beats returning "[]" and letting the caller fall back to the source.
+      if (!rawText) {
+        const reason = data?.candidates?.[0]?.finishReason || 'unknown';
+        return res.status(502).json({ error: `Model returned no text (finishReason: ${reason}). Thinking may have consumed the output budget — try a smaller batch or another model.`, usedModel });
+      }
     } else {
       const urls   = { groq: 'https://api.groq.com/openai/v1/chat/completions',
                        openrouter: 'https://openrouter.ai/api/v1/chat/completions',
@@ -59,7 +65,8 @@ export default async function handler(req, res) {
       });
       const data = await r.json();
       if (!r.ok || data.error) return res.status(r.status).json({ error: data?.error?.message || 'HTTP ' + r.status, is429: r.status === 429 });
-      rawText = data?.choices?.[0]?.message?.content || '[]';
+      rawText = data?.choices?.[0]?.message?.content || '';
+      if (!rawText) return res.status(502).json({ error: `${provider} returned no text.` });
     }
 
     res.status(200).json({ text: rawText });

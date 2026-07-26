@@ -2056,9 +2056,16 @@ async function startTranslation() {
     ].join('\n');
     try{
       const raw=await callProvider(prompt);
-      let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
+      // Never fall back to the source text: an untranslated cue that looks
+      // successful is worse than a visible error.
+      let parsed;
+      try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}
+      catch{throw new Error('model returned malformed JSON — '+raw.slice(0,120));}
+      if(!Array.isArray(parsed)) throw new Error('model returned '+typeof parsed+' instead of an array');
+      if(parsed.length!==batch.length) throw new Error(`model returned ${parsed.length} translations for ${batch.length} subtitles`);
       batch.forEach((s,j)=>{
-        let txt=parsed[j]!==undefined?parsed[j]:s.text;
+        let txt=parsed[j];
+        if(typeof txt!=='string'||!txt.trim()) throw new Error(`subtitle #${s.index}: model returned no translation`);
         // Sanitize: strip \r, cap to maxLinesPerSub lines
         if(typeof txt==='string'){
           txt=txt.replace(/\r/g,'');
