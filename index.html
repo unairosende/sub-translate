@@ -890,6 +890,9 @@ input[type=file]{display:none}
           <div class="exp-row">
             <select class="exp-sel" id="exportFormat">
               <option value="srt">SRT</option>
+              <option value="vtt">WebVTT</option>
+              <option value="ass">ASS</option>
+              <option value="ttml">TTML</option>
               <option value="txt">TXT</option>
               <option value="csv">CSV</option>
               <option value="xlsx">XLSX</option>
@@ -903,6 +906,10 @@ input[type=file]{display:none}
             <select class="exp-sel" id="exportAllFormat">
               <option value="csv">CSV</option>
               <option value="xlsx">XLSX</option>
+              <option value="srt">SRT — one file per language</option>
+              <option value="vtt">WebVTT — one file per language</option>
+              <option value="ass">ASS — one file per language</option>
+              <option value="ttml">TTML — one file per language</option>
             </select>
             <button class="exp-btn" id="exportAllBtn" onclick="exportAllTranslations();closeExportPopup()" disabled>Download</button>
           </div>
@@ -2447,6 +2454,52 @@ async function startCleanTranscript() {
 // ══════════════════════════════════════════════════════════════
 //  EXPORT — ACTIVE TAB  (includes source / convert)
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  SUBTITLE FORMAT WRITERS
+//  Internal timecodes are always SRT style (HH:MM:SS,mmm).
+// ══════════════════════════════════════════════════════════════
+function vttTime(t){ return t.replace(',','.'); }
+
+function assTime(t){                       // ASS wants H:MM:SS.cc
+  const [h,m,rest]=t.split(':');
+  const [s,ms]=rest.split(',');
+  return `${+h}:${m}:${s}.${String(Math.round(+ms/10)).padStart(2,'0')}`;
+}
+
+function escXml(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+const SUBTITLE_FORMATS=['srt','vtt','ass','ttml'];
+
+function formatSubs(subs,fmt,lang) {
+  if(fmt==='vtt')
+    return 'WEBVTT\n\n'+subs.map((s,i)=>`${i+1}\n${vttTime(s.start)} --> ${vttTime(s.end)}\n${s.text}`).join('\n\n')+'\n';
+
+  if(fmt==='ass')
+    return `[Script Info]\nTitle: ${getProjectName()}\nScriptType: v4.00+\nWrapStyle: 0\nScaledBorderAndShadow: yes\nPlayResX: 1920\nPlayResY: 1080\n\n`+
+      `[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n`+
+      `Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,60,60,50,1\n\n`+
+      `[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`+
+      subs.map(s=>`Dialogue: 0,${assTime(s.start)},${assTime(s.end)},Default,,0,0,0,,${(s.text||'').replace(/\n/g,'\\N')}`).join('\n')+'\n';
+
+  if(fmt==='ttml'){
+    // xml:lang must be a language code; tab names are free text, so only emit
+    // the attribute when it actually looks like one.
+    const code=/^[a-z]{2}(-[A-Za-z]{2,4})?$/i.test(lang||'')?` xml:lang="${escXml(lang)}"`:'';
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<tt xmlns="http://www.w3.org/ns/ttml"${code}>\n  <body>\n    <div>\n`+
+      subs.map(s=>`      <p begin="${vttTime(s.start)}" end="${vttTime(s.end)}">${escXml(s.text||'').replace(/\n/g,'<br/>')}</p>`).join('\n')+
+      `\n    </div>\n  </body>\n</tt>\n`;
+  }
+
+  if(fmt==='csv')
+    return 'Start Time,End Time,Text\n'+subs.map(s=>`"${s.start}","${s.end}","${(s.text||'').replace(/"/g,'""')}"`).join('\n');
+
+  if(fmt==='txt') return subs.map(s=>s.text).join('\n');
+
+  return subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';   // srt
+}
+
 function exportFile() {
   let subs,slug;
   if(activeTab==='source'){subs=subtitles;slug='source';}
@@ -2460,12 +2513,9 @@ function exportFile() {
     XLSX.writeFile(wb,slug+'.xlsx');
     setStatus('Exported ✓','ok'); return;
   }
-  let content='';
-  const BOM='﻿';
-  if(fmt==='srt')      content=BOM+subs.map((s,i)=>`${i+1}\n${s.start} --> ${s.end}\n${s.text}`).join('\n\n')+'\n';
-  else if(fmt==='csv') content='Start Time,End Time,Text\n'+subs.map(s=>`"${s.start}","${s.end}","${s.text.replace(/"/g,'""')}"`).join('\n');
-  else                 content=subs.map(s=>s.text).join('\n');
-  dlText(content,slug+'.'+fmt);
+  // BOM only where it helps players/spreadsheets; it breaks some VTT parsers.
+  const BOM=(fmt==='srt'||fmt==='csv')?'﻿':'';
+  dlText(BOM+formatSubs(subs,fmt,activeTab==='source'?getSrcLang():activeTab),slug+'.'+fmt);
   setStatus('Exported ✓','ok');
 }
 
@@ -2476,6 +2526,19 @@ function exportAllTranslations() {
   const langs=Object.keys(translations);
   if(!langs.length){setStatus('No translations to export','err');return;}
   const fmt=$('exportAllFormat').value;
+
+  // Subtitle formats are one file per language; the tabular ones stay a single
+  // sheet with a column per language.
+  if(SUBTITLE_FORMATS.includes(fmt)){
+    const BOM=fmt==='srt'?'﻿':'';
+    langs.forEach(lang=>{
+      const slug=lang.toLowerCase().replace(/[^a-z0-9]/g,'_');
+      dlText(BOM+formatSubs(getFinalSubs(lang),fmt,lang),slug+'.'+fmt);
+    });
+    setStatus(`Exported ${langs.length} file${langs.length>1?'s':''} ✓`,'ok');
+    return;
+  }
+
   const srcLangVal=getSrcLang();
   const srcLabel=srcLangVal==='Auto-detect'?'Source':srcLangVal;
   const header=['Start Time','End Time',srcLabel,...langs];
