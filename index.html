@@ -188,6 +188,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 /* ── Top progress bar ── */
 .top-progress{height:3px;flex-shrink:0;overflow:hidden;opacity:0;transition:opacity .2s}
 .top-progress.active{opacity:1}
+.progress-label{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:var(--z-modal);display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;font:500 12px var(--sans);color:var(--ink-2);box-shadow:0 4px 18px rgba(22,20,15,.14);white-space:nowrap}
 .top-progress-fill{height:100%;background:var(--accent);transition:width .5s ease;width:0%;box-shadow:2px 0 8px oklch(0.66 0.16 28 / 0.5)}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .top-progress.indeterminate .top-progress-fill{width:40%!important;background:linear-gradient(90deg,var(--accent) 0%,oklch(0.78 0.14 28) 50%,var(--accent) 100%);background-size:200%;animation:shimmer 1.4s infinite linear}
@@ -970,6 +971,7 @@ input[type=file]{display:none}
 
   <!-- ── Top progress bar (shows during translate / fix / back-translate) ── -->
   <div class="top-progress" id="topProgress"><div class="top-progress-fill" id="topProgressFill"></div></div>
+  <div class="progress-label" id="progressLabel" style="display:none"><span class="suggest-spinner"></span><span id="progressLabelText"></span></div>
 
   <!-- ── Sub-toolbar ── -->
   <div class="sub-toolbar">
@@ -1061,6 +1063,30 @@ function authHeaders(extra = {}) {
   return { ...extra, Authorization: pb.authStore.token };
 }
 
+// Uploaded with XHR rather than the SDK: fetch cannot report upload progress,
+// and a 30 MB file with no feedback looks like a hung app.
+function uploadMedia(blob, filename, owner, onProgress) {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('owner', owner);
+    fd.append('file', blob, filename);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', PB_URL + '/api/collections/media/records');
+    xhr.setRequestHeader('Authorization', pb.authStore.token);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) onProgress?.(Math.round(e.loaded / e.total * 100));
+    };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText || '{}'); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+      else reject(new Error(body.message || 'HTTP ' + xhr.status));
+    };
+    xhr.onerror = () => reject(new Error('Network error while uploading'));
+    xhr.send(fd);
+  });
+}
+
 // Transcribes through our own backend so the ElevenLabs key stays server-side.
 // The audio goes to PocketBase first and ElevenLabs fetches it from there, so
 // it never has to fit through Vercel's ~4.5 MB request limit.
@@ -1070,12 +1096,12 @@ async function transcribeAudio(audioBlob, filename, { language, onStatus } = {})
   const userId = (pb.authStore.record || pb.authStore.model)?.id;
 
   onStatus?.('Uploading audio…');
-  const upload = new FormData();
-  upload.append('owner', userId);
-  upload.append('file', audioBlob, filename.replace(/\.[^.]+$/, '.mp3'));
   let rec;
   try {
-    rec = await pb.collection('media').create(upload);
+    rec = await uploadMedia(audioBlob, filename.replace(/\.[^.]+$/, '.mp3'), userId, pct => {
+      showProgress(pct, `Uploading audio… ${pct}%`);
+      onStatus?.(`Uploading audio… ${pct}%`);
+    });
   } catch (e) {
     throw new Error('Upload failed: ' + (e?.message || 'unknown error'));
   }
@@ -1086,6 +1112,7 @@ async function transcribeAudio(audioBlob, filename, { language, onStatus } = {})
   const fileUrl = pb.files.getURL(rec, rec.file, { token });
 
   onStatus?.('Transcribing with ElevenLabs Scribe…');
+  showProgressIndeterminate('Transcribing with ElevenLabs Scribe…');
   const resp = await fetch('/api/transcribe', {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -2118,20 +2145,32 @@ function setStatus(msg,type) {
 }
 
 // ── Top progress bar helpers ──────────────────────────────
-function showProgress(pct) {
+// A 3px bar alone is easy to miss on long jobs, so anything that takes a while
+// also names what it is doing in a floating label.
+function setProgressLabel(text) {
+  const box=$('progressLabel');
+  if(!box) return;
+  if(!text){ box.style.display='none'; return; }
+  $('progressLabelText').textContent=text;
+  box.style.display='flex';
+}
+function showProgress(pct, label) {
   const bar=$('topProgress'), fill=$('topProgressFill');
   bar.classList.remove('indeterminate');
   bar.classList.add('active');
   fill.style.width=(pct==null?'0':pct)+'%';
+  if(label!==undefined) setProgressLabel(label);
 }
 function hideProgress() {
   const bar=$('topProgress'), fill=$('topProgressFill');
   fill.style.width='100%';
+  setProgressLabel('');
   setTimeout(()=>{ bar.classList.remove('active'); fill.style.width='0%'; }, 500);
 }
-function showProgressIndeterminate() {
+function showProgressIndeterminate(label) {
   const bar=$('topProgress');
   bar.classList.add('active','indeterminate');
+  if(label!==undefined) setProgressLabel(label);
 }
 
 // ── Translate button busy state ───────────────────────────
@@ -2206,7 +2245,7 @@ async function startTranslation() {
   const srcNote=srcLang!=='Auto-detect'?' from '+srcLang:'';
   pushUndo();
   $('translateBtn').disabled=true; $('exportBtn').disabled=true;
-  setTranslateBtn(true,'Translating…'); showProgress(0); setStatus('Translating…');
+  setTranslateBtn(true,'Translating…'); showProgress(0,`Translating to ${lang}…`); setStatus('Translating…');
   const snap=[...subtitles], result=[];
   const BATCH=window._providerBatch||30, PAUSE=window._providerPause||2000;
 
@@ -2262,7 +2301,7 @@ async function startTranslation() {
         result.push({...s,text:txt});
       });
       const done=Math.min(i+BATCH,snap.length);
-      showProgress(Math.round(done/snap.length*100));
+      showProgress(Math.round(done/snap.length*100),`Translating to ${lang}… ${done}/${snap.length} subtitles`);
       setTranslateBtn(true,'Translating…');
     }catch(e){setStatus('Error: '+e.message,'err');$('translateBtn').disabled=false;setTranslateBtn(false);hideProgress();return;}
   }
@@ -2399,7 +2438,7 @@ async function startBackTranslation() {
   const srcLangVal=getSrcLang();
   const srcLang=srcLangVal==='Auto-detect'?'the original language':srcLangVal;
   const btn=$('btBtn'); btn.disabled=true; btn.textContent='Back-translating…';
-  showProgress(0); setStatus(`Back-translating to ${srcLang}…`);
+  showProgress(0,`Back-translating to ${srcLang}…`); setStatus(`Back-translating to ${srcLang}…`);
   const subs=translations[lang], BATCH=window._providerBatch||30, PAUSE=window._providerPause||2000;
   const result=[];
   for(let i=0;i<subs.length;i+=BATCH){
@@ -2415,7 +2454,7 @@ async function startBackTranslation() {
       batch.forEach((s,j)=>result.push({...s,text:parsed[j]!==undefined?parsed[j]:s.text}));
       const done=Math.min(i+BATCH,subs.length);
       setStatus(`Back-translating… ${done} / ${subs.length}`);
-      showProgress(Math.round(done/subs.length*100));
+      showProgress(Math.round(done/subs.length*100),`Back-translating… ${done}/${subs.length} subtitles`);
     }catch(e){setStatus('Error: '+e.message,'err');btn.disabled=false;updateBtBtn();hideProgress();return;}
   }
   backTranslations[lang]=result;
@@ -2430,7 +2469,7 @@ async function startCleanTranscript() {
   if(!subtitles.length) return;
   const btn=$('cleanBtn'); btn.disabled=true;
   btn.innerHTML='<span class="suggest-spinner"></span> Cleaning…';
-  showProgressIndeterminate(); setStatus('Cleaning transcript…');
+  showProgressIndeterminate('Cleaning transcript…'); setStatus('Cleaning transcript…');
   pushUndo();
   const snap=[...subtitles], result=[];
   const BATCH=window._providerBatch||30, PAUSE=window._providerPause||2000;
@@ -2466,7 +2505,7 @@ async function startCleanTranscript() {
       const raw=await callProvider(prompt);
       let parsed; try{parsed=JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());}catch{parsed=batch.map(s=>s.text);}
       batch.forEach((s,j)=>result.push({...s,text:(typeof parsed[j]==='string'?parsed[j]:s.text)}));
-      showProgress(Math.round(Math.min(i+BATCH,snap.length)/snap.length*100));
+      showProgress(Math.round(Math.min(i+BATCH,snap.length)/snap.length*100),`Cleaning transcript… ${Math.min(i+BATCH,snap.length)}/${snap.length}`);
     }catch(e){
       setStatus('Error: '+e.message,'err');
       btn.disabled=false; btn.textContent='✦ Clean transcript'; hideProgress(); return;
@@ -2808,7 +2847,7 @@ async function startAlignment() {
   if(!text){setAlignStatus('Paste a transcript first','err');return;}
   if(!alignAudioFile){setAlignStatus('Select an audio file first','err');return;}
   const btn=$('alignBtn'); btn.disabled=true;
-  showProgressIndeterminate(); setStatus('Aligning…');
+  showProgressIndeterminate('Aligning…'); setStatus('Aligning…');
   try {
     // Step 1 — transcribe to get word timestamps
     setAlignStatus('Transcribing to get word timestamps…');
