@@ -290,6 +290,9 @@ input[type=file]{display:none}
 .char-bar-fill{height:100%;border-radius:2px;background:var(--ok);transition:width .3s}
 .char-bar-fill.warn{background:var(--warn)}
 .char-bar-fill.error{background:var(--err)}
+.sub-cps{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);flex-shrink:0}
+.sub-cps.warn{color:var(--warn-ink)}
+.sub-cps.error{color:var(--err-ink)}
 .back-trans{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .back-trans-label{font-size:9px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;margin-bottom:3px;font-weight:600}
 .back-trans-text{font-size:12px;color:var(--ink-2);line-height:1.5;word-break:break-word}
@@ -558,6 +561,29 @@ input[type=file]{display:none}
       <div class="sg-row">
         <span class="sg-label">Max lines/subtitle</span>
         <input class="sg-input" type="number" id="s-maxLines" min="1" max="6" value="2">
+      </div>
+
+      <div class="sg-sep"></div>
+      <div class="sg-title">Quality Checks</div>
+      <div class="sg-row">
+        <span class="sg-label">Reading speed — warn (cps)</span>
+        <input class="sg-input" type="number" id="s-cpsWarn" min="5" max="40" step="0.5" value="17">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Reading speed — error (cps)</span>
+        <input class="sg-input" type="number" id="s-cpsError" min="5" max="40" step="0.5" value="21">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Min duration (s)</span>
+        <input class="sg-input" type="number" id="s-minDur" min="0.1" max="10" step="0.01" value="0.83">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Max duration (s)</span>
+        <input class="sg-input" type="number" id="s-maxDur" min="1" max="30" step="0.5" value="7">
+      </div>
+      <div class="sg-row">
+        <span class="sg-label">Min gap between cues (s)</span>
+        <input class="sg-input" type="number" id="s-minGap" min="0" max="2" step="0.01" value="0.08">
       </div>
 
       <div class="sg-sep"></div>
@@ -1215,6 +1241,14 @@ function signOut() {
 //  SETTINGS
 // ══════════════════════════════════════════════════════════════
 let settings = {
+  // Quality-check thresholds. Defaults follow common broadcast practice:
+  // ~17 cps comfortable, 21 hard limit, cues between 0.83 s and 7 s,
+  // and at least 2 frames of gap between them.
+  cpsWarn:            17,
+  cpsError:           21,
+  minDur:             0.83,
+  maxDur:             7,
+  minGap:             0.08,
   maxCharsH:          46,
   maxCharsV:          32,
   maxLinesPerSub:      2,
@@ -1246,6 +1280,11 @@ function openSettings() {
   $('s-maxH').value         = settings.maxCharsH;
   $('s-maxV').value         = settings.maxCharsV;
   $('s-maxLines').value      = settings.maxLinesPerSub;
+  $('s-cpsWarn').value       = settings.cpsWarn;
+  $('s-cpsError').value      = settings.cpsError;
+  $('s-minDur').value        = settings.minDur;
+  $('s-maxDur').value        = settings.maxDur;
+  $('s-minGap').value        = settings.minGap;
   $('s-elModel').value       = settings.elModel;
   $('s-transProvider').value = settings.translationProvider;
   onSettingsProviderChange();   // populates model list + rate note
@@ -1260,6 +1299,11 @@ function saveSettings() {
   settings.maxCharsH       = Math.max(10, parseInt($('s-maxH').value)     || 42);
   settings.maxCharsV       = Math.max(10, parseInt($('s-maxV').value)     || 32);
   settings.maxLinesPerSub  = Math.max(1,  parseInt($('s-maxLines').value) || 2);
+  settings.cpsWarn         = Math.max(1,  parseFloat($('s-cpsWarn').value)  || 17);
+  settings.cpsError        = Math.max(settings.cpsWarn, parseFloat($('s-cpsError').value) || 21);
+  settings.minDur          = Math.max(0,  parseFloat($('s-minDur').value)   || 0.83);
+  settings.maxDur          = Math.max(settings.minDur, parseFloat($('s-maxDur').value) || 7);
+  settings.minGap          = Math.max(0,  parseFloat($('s-minGap').value)   || 0);
   settings.elModel         = $('s-elModel').value;
   settings.translationProvider = $('s-transProvider').value;
   settings.translationModel    = $('s-transModel').value;
@@ -1779,12 +1823,64 @@ function charStatus(text) {
 function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ══════════════════════════════════════════════════════════════
+//  QUALITY CHECKS
+//  charStatus() only sees text; these also look at timing and at the
+//  neighbouring cue. Timings live on the source cues and are mirrored by every
+//  translation, so the previous cue is always looked up there.
+// ══════════════════════════════════════════════════════════════
+function prevCue(sub){ return subtitles.find(s=>s.index===sub.index-1); }
+
+function cueSeconds(sub){ return (tcToMs(sub.end)-tcToMs(sub.start))/1000; }
+
+function cueCps(sub){
+  const dur=cueSeconds(sub);
+  if(dur<=0) return null;
+  return (sub.text||'').replace(/\n/g,' ').length/dur;
+}
+
+function qcIssues(sub,prev) {
+  const issues=[];
+  const text=sub.text||'';
+  const lines=text.split('\n');
+  const longest=Math.max(0,...lines.map(l=>l.length));
+  const maxLines=Math.min(2,settings.maxLinesPerSub);
+
+  if(longest>maxLen()) issues.push({level:'error',msg:`Line too long — ${longest}/${maxLen()} chars`});
+  else if(longest>Math.floor(maxLen()*0.85)) issues.push({level:'warn',msg:`Line near limit — ${longest}/${maxLen()} chars`});
+  if(lines.length>maxLines) issues.push({level:'error',msg:`${lines.length} lines (max ${maxLines})`});
+
+  const dur=cueSeconds(sub);
+  if(dur<=0){
+    issues.push({level:'error',msg:'End time is not after start time'});
+  } else {
+    const cps=cueCps(sub);
+    if(cps>settings.cpsError) issues.push({level:'error',msg:`Reading speed ${cps.toFixed(1)} cps (max ${settings.cpsError})`});
+    else if(cps>settings.cpsWarn) issues.push({level:'warn',msg:`Reading speed ${cps.toFixed(1)} cps (over ${settings.cpsWarn})`});
+    if(dur<settings.minDur) issues.push({level:'warn',msg:`Too short — ${dur.toFixed(2)}s (min ${settings.minDur}s)`});
+    if(dur>settings.maxDur) issues.push({level:'warn',msg:`Too long — ${dur.toFixed(1)}s (max ${settings.maxDur}s)`});
+  }
+
+  if(prev){
+    const gap=(tcToMs(sub.start)-tcToMs(prev.end))/1000;
+    if(gap<0) issues.push({level:'error',msg:`Overlaps cue #${prev.index} by ${Math.abs(gap).toFixed(2)}s`});
+    else if(gap<settings.minGap) issues.push({level:'warn',msg:`Gap ${gap.toFixed(2)}s after cue #${prev.index} (min ${settings.minGap}s)`});
+  }
+  return issues;
+}
+
+function qcStatus(sub,prev) {
+  const issues=qcIssues(sub,prev===undefined?prevCue(sub):prev);
+  if(issues.some(i=>i.level==='error')) return 'error';
+  return issues.length?'warn':'ok';
+}
+
+// ══════════════════════════════════════════════════════════════
 //  RENDER
 // ══════════════════════════════════════════════════════════════
 function renderCurrentView() {
   const area=$('editorArea'); area.innerHTML='';
   const _activeSubs=activeTab==='source'?subtitles:(translations[activeTab]?getFinalSubs(activeTab):[]);
-  const activeSubs=pillFilter?_activeSubs.filter(s=>charStatus(s.text)===(pillFilter==='warn'?'warn':'error')):_activeSubs;
+  const activeSubs=pillFilter?_activeSubs.filter(s=>qcStatus(s)===(pillFilter==='warn'?'warn':'error')):_activeSubs;
   updatePills(activeSubs);
   updateBtBtn();
   updateCleanBtn();
@@ -1835,10 +1931,15 @@ function renderCompareView(container,translatedSubs) {
 //  CARD FACTORY
 // ══════════════════════════════════════════════════════════════
 function makeCard(sub,editable,lang) {
-  const st=charStatus(sub.text);
+  const cst=charStatus(sub.text);              // colours the character bar
+  const issues=qcIssues(sub,prevCue(sub));     // full QC, colours the card
+  const st=issues.some(i=>i.level==='error')?'error':issues.length?'warn':'ok';
   const longest=Math.max(...sub.text.split('\n').map(l=>l.length));
   const pct=Math.min(100,Math.round(longest/maxLen()*100));
+  const cps=cueCps(sub);
+  const cpsLevel=cps===null||cps>settings.cpsError?'error':cps>settings.cpsWarn?'warn':'ok';
   const card=el('div','sub-card'+(st==='error'?' error':st==='warn'?' warn':'')+(editable?' editable':''));
+  if(issues.length) card.title=issues.map(i=>(i.level==='error'?'✕ ':'⚠ ')+i.msg).join('\n');
   card.dataset.idx=sub.index; card.dataset.lang=lang;
   const safeText = sub.text || '';
   const splitBtnHtml = lang==='source'
@@ -1850,7 +1951,9 @@ function makeCard(sub,editable,lang) {
     `<div class="sub-time">${escHtml(sub.start)} → ${escHtml(sub.end)}</div>`+
     (editable?`<svg class="edit-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`:'')+
     `<div class="sub-text">${escHtml(safeText)}</div>`+
-    `<div class="sub-meta"><span class="sub-chars ${st==='ok'?'':st}">${longest}/${maxLen()}</span><div class="char-bar"><div class="char-bar-fill ${st==='ok'?'':st}" style="width:${pct}%"></div></div>${splitBtnHtml}</div>`;
+    `<div class="sub-meta"><span class="sub-chars ${cst==='ok'?'':cst}">${longest}/${maxLen()}</span>`+
+    `<span class="sub-cps ${cpsLevel==='ok'?'':cpsLevel}">${cps===null?'—':cps.toFixed(1)} cps</span>`+
+    `<div class="char-bar"><div class="char-bar-fill ${cst==='ok'?'':cst}" style="width:${pct}%"></div></div>${splitBtnHtml}</div>`;
   if(editable) card.addEventListener('click',()=>openEdit(card,sub,lang));
 
   if(lang!=='source'&&backTranslations[lang]) {
@@ -1954,8 +2057,8 @@ function setupDrop(dz) {
 // ══════════════════════════════════════════════════════════════
 function updatePills(subs) {
   const n=(subs||[]).length;
-  const warns=(subs||[]).filter(s=>charStatus(s.text)==='warn').length;
-  const errs =(subs||[]).filter(s=>charStatus(s.text)==='error').length;
+  const warns=(subs||[]).filter(s=>qcStatus(s)==='warn').length;
+  const errs =(subs||[]).filter(s=>qcStatus(s)==='error').length;
   const cp=$('countPill'), wp=$('warnPill'), ep=$('errPill');
   cp.textContent=n+' subs';
   cp.style.cursor='pointer';
@@ -3306,7 +3409,7 @@ function tlRender(){
     const x0=tlToPx(s0,W), x1=tlToPx(s1,W);
     const bW=Math.max(4,x1-x0), bH=BLOCK_H-6, bY=BLOCK_Y+3;
     const isActive=i===tlActiveCue;
-    const cst=charStatus(s.text);
+    const cst=qcStatus(s);
     // Fill with rounded corners, no border
     const R=8; // corner radius
     if(cst==='error'){
