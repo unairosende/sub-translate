@@ -188,6 +188,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 /* ── Top progress bar ── */
 .top-progress{height:3px;flex-shrink:0;overflow:hidden;opacity:0;transition:opacity .2s}
 .top-progress.active{opacity:1}
+.conflict-banner{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:var(--z-modal);display:flex;align-items:center;gap:10px;padding:8px 12px 8px 16px;background:var(--panel);border:1px solid var(--err);border-radius:10px;font:500 12.5px var(--sans);color:var(--ink);box-shadow:0 6px 24px rgba(22,20,15,.18)}
 .progress-label{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:var(--z-modal);display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;font:500 12px var(--sans);color:var(--ink-2);box-shadow:0 4px 18px rgba(22,20,15,.14);white-space:nowrap}
 .top-progress-fill{height:100%;background:var(--accent);transition:width .5s ease;width:0%;box-shadow:2px 0 8px oklch(0.66 0.16 28 / 0.5)}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
@@ -513,6 +514,15 @@ input[type=file]{display:none}
 </div>
 
 <div id="mainApp" class="app" style="display:none">
+
+<!-- ══════════════════════════════════════════════
+     CONFLICT BANNER
+══════════════════════════════════════════════ -->
+<div id="conflictBanner" class="conflict-banner" style="display:none">
+  <span id="conflictText">Someone else saved this project while you were editing.</span>
+  <button class="btn" onclick="resolveConflictReload()">Load their version</button>
+  <button class="btn" onclick="resolveConflictOverwrite()">Keep mine</button>
+</div>
 
 <!-- ══════════════════════════════════════════════
      GLOSSARY MODAL
@@ -3202,8 +3212,38 @@ function glossaryRules() {
 //  CLOUD PROJECTS  (PocketBase)
 // ══════════════════════════════════════════════════════════════
 let currentProjectId = null;
+let currentProjectUpdated = null;   // server timestamp of the version we loaded
 let projectsCache = [];
 let cloudSaveTimer = null, cloudSaveInFlight = false, cloudSavePending = false;
+
+// Two people editing the same project would otherwise overwrite each other
+// silently: the whole cue list is stored in one JSON field, so the last save
+// wins outright. Compare the server's timestamp before writing and let the
+// user choose.
+// ponytail: costs one extra GET per save. Fine against a NAS on the LAN; if it
+// ever hurts, move the check into a PocketBase hook.
+function showConflictBanner(who) {
+  $('conflictText').textContent = who
+    ? `${who} saved this project while you were editing.`
+    : 'Someone else saved this project while you were editing.';
+  $('conflictBanner').style.display = 'flex';
+}
+function hideConflictBanner() { $('conflictBanner').style.display = 'none'; }
+
+async function resolveConflictReload() {
+  hideConflictBanner();
+  if (currentProjectId) await openProject(currentProjectId);
+}
+
+async function resolveConflictOverwrite() {
+  hideConflictBanner();
+  try {
+    // Adopt their timestamp so our next write is accepted, then push our copy.
+    const remote = await pb.collection('projects').getOne(currentProjectId, { fields: 'id,updated' });
+    currentProjectUpdated = remote.updated;
+    await saveProjectToCloud();
+  } catch (e) { setSyncStatus('error', e?.message); }
+}
 
 function userId() { return (pb.authStore.record || pb.authStore.model)?.id; }
 
@@ -3211,9 +3251,10 @@ function setSyncStatus(state, detail) {
   const dot = $('savedDot');
   if (!dot) return;
   const map = {
-    saving: ['var(--warn)', 'Saving…'],
-    saved:  ['var(--ok)',   'Saved to cloud'],
-    error:  ['var(--err)',  'Not saved — ' + (detail || 'unknown error')],
+    saving:   ['var(--warn)', 'Saving…'],
+    saved:    ['var(--ok)',   'Saved to cloud'],
+    conflict: ['var(--err)',  'Not saved — someone else changed this project'],
+    error:    ['var(--err)',  'Not saved — ' + (detail || 'unknown error')],
   };
   const [color, title] = map[state] || map.saved;
   dot.style.background = color;
@@ -3249,16 +3290,25 @@ async function saveProjectToCloud() {
   setSyncStatus('saving');
   try {
     if (currentProjectId) {
-      await pb.collection('projects').update(currentProjectId, projectPayload());
+      const remote = await pb.collection('projects').getOne(currentProjectId, { fields: 'id,updated' });
+      if (currentProjectUpdated && remote.updated !== currentProjectUpdated) {
+        setSyncStatus('conflict');
+        showConflictBanner();
+        return;                                   // never overwrite blindly
+      }
+      const rec = await pb.collection('projects').update(currentProjectId, projectPayload());
+      currentProjectUpdated = rec.updated;
+      rememberProject(currentProjectId, rec.updated);
     } else {
       const rec = await pb.collection('projects').create({ ...projectPayload(), owner: userId() });
       currentProjectId = rec.id;
-      rememberProjectId(rec.id);
+      currentProjectUpdated = rec.updated;
+      rememberProject(rec.id, rec.updated);
     }
     setSyncStatus('saved');
   } catch (e) {
     // A deleted project id would keep failing forever — forget it and start over.
-    if (e?.status === 404) { currentProjectId = null; rememberProjectId(null); }
+    if (e?.status === 404) { currentProjectId = null; currentProjectUpdated = null; rememberProject(null, null); }
     setSyncStatus('error', e?.message);
   } finally {
     cloudSaveInFlight = false;
@@ -3267,11 +3317,13 @@ async function saveProjectToCloud() {
 }
 
 // Written straight to localStorage: saveStateLocally() would re-enter the
-// debounce we are already inside.
-function rememberProjectId(id) {
+// debounce we are already inside. The timestamp rides along so a page reload
+// still knows which version it was editing.
+function rememberProject(id, updated) {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
     s.projectId = id;
+    s.projectUpdated = updated || null;
     localStorage.setItem(SAVE_KEY, JSON.stringify(s));
   } catch {}
 }
@@ -3363,7 +3415,9 @@ async function openProject(id) {
 function applyProjectRecord(rec) {
   const d = rec.data || {};
   currentProjectId = rec.id;
-  rememberProjectId(rec.id);
+  currentProjectUpdated = rec.updated;
+  hideConflictBanner();
+  rememberProject(rec.id, rec.updated);
   subtitles = d.subtitles || [];
   translations = d.translations || {};
   backTranslations = d.backTranslations || {};
@@ -3386,7 +3440,9 @@ async function newProject() {
   clearTimeout(cloudSaveTimer);
   if (currentProjectId && subtitles.length) await saveProjectToCloud();
   currentProjectId = null;
-  rememberProjectId(null);
+  currentProjectUpdated = null;
+  hideConflictBanner();
+  rememberProject(null, null);
   subtitles = []; translations = {}; backTranslations = {}; glossary = [];
   activeTab = 'source';
   if ($('projectName')) $('projectName').value = 'Untitled project';
@@ -3423,7 +3479,7 @@ async function deleteProject(p) {
   if (!confirm(`Delete "${p.name || 'Untitled project'}"? This cannot be undone.`)) return;
   try {
     await pb.collection('projects').delete(p.id);
-    if (p.id === currentProjectId) { currentProjectId = null; rememberProjectId(null); }
+    if (p.id === currentProjectId) { currentProjectId = null; currentProjectUpdated = null; rememberProject(null, null); }
     openProjectsModal();
   } catch (e) { setStatus('Delete failed: ' + (e?.message || ''), 'err'); }
 }
@@ -3435,6 +3491,7 @@ function saveStateLocally() {
     const state = {
       v: 2,
       projectId: currentProjectId,
+      projectUpdated: currentProjectUpdated,
       projectName: getProjectName(),
       subtitles,
       translations,
@@ -3460,6 +3517,7 @@ function loadStateLocally() {
     if (!state?.v) return false;
 
     currentProjectId = state.projectId || null;
+    currentProjectUpdated = state.projectUpdated || null;
     glossary = state.glossary || [];
     if (state.projectName && $('projectName')) $('projectName').value = state.projectName;
     if (Array.isArray(state.subtitles) && state.subtitles.length) {
