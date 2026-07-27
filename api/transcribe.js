@@ -1,5 +1,9 @@
 import { requireUser } from './_auth.js';
 
+// ElevenLabs holds the connection open while it transcribes, so the ceiling
+// here is how long the audio takes to process, not how large the file is.
+export const config = { maxDuration: 300 };
+
 const PB_URL = process.env.PB_URL || 'https://api.captio.studio';
 
 // The browser uploads audio to PocketBase and sends us the URL; ElevenLabs
