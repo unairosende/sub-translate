@@ -314,6 +314,19 @@ input[type=file]{display:none}
 .modal-close{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:20px;line-height:1;padding:0 4px;border-radius:4px}
 .modal-close:hover{color:var(--ink);background:var(--line-2)}
 .modal-body{padding:18px 16px;overflow-y:auto;flex:1}
+/* ── Projects list ── */
+.proj-search{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--ink);font:400 12.5px var(--sans);margin-bottom:10px}
+.proj-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer}
+.proj-row:hover{background:var(--panel-2)}
+.proj-row.current{border-color:var(--accent-ink);background:var(--accent-soft)}
+.proj-info{flex:1;min-width:0}
+.proj-name{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.proj-actions{display:flex;gap:4px;flex-shrink:0}
+.proj-btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;font-size:11px;padding:3px 7px;cursor:pointer;color:var(--ink-2)}
+.proj-btn:hover{background:var(--line-2)}
+.proj-btn.danger:hover{color:var(--err);border-color:var(--err)}
+.proj-empty{padding:20px;text-align:center;color:var(--ink-3);font-size:12.5px}
 .modal-body::-webkit-scrollbar{width:4px}
 .modal-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
 .modal-ft{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
@@ -491,6 +504,25 @@ input[type=file]{display:none}
 </div>
 
 <div id="mainApp" class="app" style="display:none">
+
+<!-- ══════════════════════════════════════════════
+     PROJECTS MODAL
+══════════════════════════════════════════════ -->
+<div id="projectsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeProjectsModal()" role="dialog" aria-modal="true" aria-label="Projects">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">Projects</span>
+      <button class="modal-close" onclick="closeProjectsModal()" aria-label="Close projects">×</button>
+    </div>
+    <div class="modal-body">
+      <input id="projSearch" class="proj-search" placeholder="Search projects…" oninput="renderProjectList()" spellcheck="false">
+      <div id="projectsList"></div>
+    </div>
+    <div class="modal-ft" style="padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="newProject()">New project</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════
      SETTINGS MODAL
@@ -871,6 +903,7 @@ input[type=file]{display:none}
         <span id="projectMetaText">No subtitles loaded</span>
       </div>
     </div>
+    <button class="btn" onclick="openProjectsModal()" title="Open projects">Projects</button>
     <div class="header-divider"></div>
     <!-- Language pills -->
     <div class="header-langs" id="headerLangs"></div>
@@ -2855,12 +2888,242 @@ function deleteSubtitle(idx) {
 // ══════════════════════════════════════════════════════════════
 //  LOCAL SAVE / LOAD
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  CLOUD PROJECTS  (PocketBase)
+// ══════════════════════════════════════════════════════════════
+let currentProjectId = null;
+let projectsCache = [];
+let cloudSaveTimer = null, cloudSaveInFlight = false, cloudSavePending = false;
+
+function userId() { return (pb.authStore.record || pb.authStore.model)?.id; }
+
+function setSyncStatus(state, detail) {
+  const dot = $('savedDot');
+  if (!dot) return;
+  const map = {
+    saving: ['var(--warn)', 'Saving…'],
+    saved:  ['var(--ok)',   'Saved to cloud'],
+    error:  ['var(--err)',  'Not saved — ' + (detail || 'unknown error')],
+  };
+  const [color, title] = map[state] || map.saved;
+  dot.style.background = color;
+  dot.title = title;
+}
+
+// Every mutation already funnels through saveStateLocally(), so hooking the
+// cloud save in there covers the whole app instead of ~15 call sites.
+function scheduleCloudSave() {
+  if (!pb.authStore.isValid || !subtitles.length) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(saveProjectToCloud, 2000);
+}
+
+function projectPayload() {
+  return {
+    name: getProjectName(),
+    data: {
+      subtitles, translations, backTranslations, settings, outputMode,
+      srcLang: $('srcLangSelect')?.value || '',
+      tgtLang: $('langSelect')?.value || '',
+      customInstructions: $('customPromptInstructions')?.value || '',
+    },
+    source_lang: $('srcLangSelect')?.value || '',
+    target_langs: Object.keys(translations),
+  };
+}
+
+async function saveProjectToCloud() {
+  if (!pb.authStore.isValid || !subtitles.length) return;
+  if (cloudSaveInFlight) { cloudSavePending = true; return; }
+  cloudSaveInFlight = true;
+  setSyncStatus('saving');
+  try {
+    if (currentProjectId) {
+      await pb.collection('projects').update(currentProjectId, projectPayload());
+    } else {
+      const rec = await pb.collection('projects').create({ ...projectPayload(), owner: userId() });
+      currentProjectId = rec.id;
+      rememberProjectId(rec.id);
+    }
+    setSyncStatus('saved');
+  } catch (e) {
+    // A deleted project id would keep failing forever — forget it and start over.
+    if (e?.status === 404) { currentProjectId = null; rememberProjectId(null); }
+    setSyncStatus('error', e?.message);
+  } finally {
+    cloudSaveInFlight = false;
+    if (cloudSavePending) { cloudSavePending = false; scheduleCloudSave(); }
+  }
+}
+
+// Written straight to localStorage: saveStateLocally() would re-enter the
+// debounce we are already inside.
+function rememberProjectId(id) {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+    s.projectId = id;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+  } catch {}
+}
+
+async function openProjectsModal() {
+  $('projectsModal').style.display = 'flex';
+  const list = $('projectsList');
+  list.textContent = 'Loading…';
+  try {
+    projectsCache = await pb.collection('projects').getFullList({ sort: '-updated' });
+    renderProjectList();
+  } catch (e) {
+    list.innerHTML = '';
+    list.appendChild(projEmpty('Could not load projects: ' + (e?.message || 'unknown error')));
+  }
+}
+
+function closeProjectsModal() { $('projectsModal').style.display = 'none'; }
+
+function projEmpty(text) {
+  const d = document.createElement('div');
+  d.className = 'proj-empty';
+  d.textContent = text;
+  return d;
+}
+
+function renderProjectList() {
+  const list = $('projectsList');
+  const q = ($('projSearch')?.value || '').toLowerCase().trim();
+  const items = q ? projectsCache.filter(p => (p.name || '').toLowerCase().includes(q)) : projectsCache;
+  list.innerHTML = '';
+  if (!items.length) {
+    list.appendChild(projEmpty(projectsCache.length ? 'No projects match that search.' : 'No saved projects yet.'));
+    return;
+  }
+  items.forEach(p => list.appendChild(projectRow(p)));
+}
+
+// Built from DOM nodes rather than innerHTML — project names are user input.
+function projectRow(p) {
+  const row = document.createElement('div');
+  row.className = 'proj-row' + (p.id === currentProjectId ? ' current' : '');
+  row.onclick = e => { if (!e.target.classList.contains('proj-btn')) openProject(p.id); };
+
+  const info = document.createElement('div');
+  info.className = 'proj-info';
+  const name = document.createElement('div');
+  name.className = 'proj-name';
+  name.textContent = p.name || 'Untitled project';
+  const meta = document.createElement('div');
+  meta.className = 'proj-meta';
+  const cues = p.data?.subtitles?.length || 0;
+  const langs = (p.target_langs || []).length;
+  meta.textContent = `${cues} cues · ${langs} translation${langs === 1 ? '' : 's'} · ${new Date(p.updated).toLocaleDateString()}`;
+  info.append(name, meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'proj-actions';
+  actions.append(
+    projBtn('Rename', () => renameProject(p)),
+    projBtn('Duplicate', () => duplicateProject(p)),
+    projBtn('Delete', () => deleteProject(p), true),
+  );
+
+  row.append(info, actions);
+  return row;
+}
+
+function projBtn(label, fn, danger) {
+  const b = document.createElement('button');
+  b.className = 'proj-btn' + (danger ? ' danger' : '');
+  b.textContent = label;
+  b.onclick = fn;
+  return b;
+}
+
+async function openProject(id) {
+  // Flush pending edits before switching away, or they would be lost.
+  clearTimeout(cloudSaveTimer);
+  if (currentProjectId && subtitles.length) await saveProjectToCloud();
+  try {
+    applyProjectRecord(await pb.collection('projects').getOne(id));
+    closeProjectsModal();
+  } catch (e) {
+    setStatus('Could not open project: ' + (e?.message || ''), 'err');
+  }
+}
+
+function applyProjectRecord(rec) {
+  const d = rec.data || {};
+  currentProjectId = rec.id;
+  rememberProjectId(rec.id);
+  subtitles = d.subtitles || [];
+  translations = d.translations || {};
+  backTranslations = d.backTranslations || {};
+  if (d.settings) Object.assign(settings, d.settings);
+  if (d.outputMode) {
+    outputMode = d.outputMode;
+    $('opt-h').className = 'radio-opt' + (outputMode === 'horizontal' ? ' active' : '');
+    $('opt-v').className = 'radio-opt' + (outputMode === 'vertical'   ? ' active' : '');
+  }
+  if ($('projectName')) $('projectName').value = rec.name || 'Untitled project';
+  if (d.srcLang && $('srcLangSelect')) $('srcLangSelect').value = d.srcLang;
+  if (d.tgtLang && $('langSelect')) $('langSelect').value = d.tgtLang;
+  if ($('customPromptInstructions')) $('customPromptInstructions').value = d.customInstructions || '';
+  activeTab = 'source';
+  afterLoad();
+}
+
+async function newProject() {
+  clearTimeout(cloudSaveTimer);
+  if (currentProjectId && subtitles.length) await saveProjectToCloud();
+  currentProjectId = null;
+  rememberProjectId(null);
+  subtitles = []; translations = {}; backTranslations = {};
+  activeTab = 'source';
+  if ($('projectName')) $('projectName').value = 'Untitled project';
+  if ($('customPromptInstructions')) $('customPromptInstructions').value = '';
+  closeProjectsModal();
+  afterLoad();
+}
+
+async function renameProject(p) {
+  const name = prompt('Project name:', p.name || 'Untitled project');
+  if (name === null) return;
+  const clean = name.trim() || 'Untitled project';
+  try {
+    await pb.collection('projects').update(p.id, { name: clean });
+    if (p.id === currentProjectId && $('projectName')) $('projectName').value = clean;
+    openProjectsModal();
+  } catch (e) { setStatus('Rename failed: ' + (e?.message || ''), 'err'); }
+}
+
+async function duplicateProject(p) {
+  try {
+    await pb.collection('projects').create({
+      owner: userId(),
+      name: (p.name || 'Untitled project') + ' (copy)',
+      data: p.data,
+      source_lang: p.source_lang,
+      target_langs: p.target_langs,
+    });
+    openProjectsModal();
+  } catch (e) { setStatus('Duplicate failed: ' + (e?.message || ''), 'err'); }
+}
+
+async function deleteProject(p) {
+  if (!confirm(`Delete "${p.name || 'Untitled project'}"? This cannot be undone.`)) return;
+  try {
+    await pb.collection('projects').delete(p.id);
+    if (p.id === currentProjectId) { currentProjectId = null; rememberProjectId(null); }
+    openProjectsModal();
+  } catch (e) { setStatus('Delete failed: ' + (e?.message || ''), 'err'); }
+}
+
 const SAVE_KEY = 'sub_translate_project';
 
 function saveStateLocally() {
   try {
     const state = {
       v: 2,
+      projectId: currentProjectId,
       projectName: getProjectName(),
       subtitles,
       translations,
@@ -2873,6 +3136,8 @@ function saveStateLocally() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     markSaved();
   } catch(e) { /* storage full or unavailable */ }
+  // Local copy is the safety net; the cloud is the source of truth.
+  scheduleCloudSave();
 }
 
 function loadStateLocally() {
@@ -2882,6 +3147,7 @@ function loadStateLocally() {
     const state = JSON.parse(raw);
     if (!state?.v) return false;
 
+    currentProjectId = state.projectId || null;
     if (state.projectName && $('projectName')) $('projectName').value = state.projectName;
     if (Array.isArray(state.subtitles) && state.subtitles.length) {
       subtitles = state.subtitles;
