@@ -315,6 +315,8 @@ input[type=file]{display:none}
 
 /* ── Settings modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(22,20,15,.3);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal)}
+/* Opened from on top of another modal — must win regardless of DOM order. */
+.modal-overlay.modal-top{z-index:calc(var(--z-modal) + 1)}
 .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:460px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(22,20,15,.12)}
 .modal-hd{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .modal-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-0.005em}
@@ -529,7 +531,7 @@ input[type=file]{display:none}
 <!-- ══════════════════════════════════════════════
      COMMENTS MODAL
 ══════════════════════════════════════════════ -->
-<div id="commentsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeComments()" role="dialog" aria-modal="true" aria-label="Comments">
+<div id="commentsModal" class="modal-overlay modal-top" style="display:none" onclick="if(event.target===this)closeComments()" role="dialog" aria-modal="true" aria-label="Comments">
   <div class="modal-box">
     <div class="modal-hd">
       <span class="modal-title" id="commentsTitle">Comments</span>
@@ -548,7 +550,7 @@ input[type=file]{display:none}
 <!-- ══════════════════════════════════════════════
      USAGE MODAL
 ══════════════════════════════════════════════ -->
-<div id="usageModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUsageModal()" role="dialog" aria-modal="true" aria-label="Usage">
+<div id="usageModal" class="modal-overlay modal-top" style="display:none" onclick="if(event.target===this)closeUsageModal()" role="dialog" aria-modal="true" aria-label="Usage">
   <div class="modal-box">
     <div class="modal-hd">
       <span class="modal-title">Usage</span>
@@ -564,7 +566,7 @@ input[type=file]{display:none}
 <!-- ══════════════════════════════════════════════
      SHARE MODAL
 ══════════════════════════════════════════════ -->
-<div id="shareModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeShareModal()" role="dialog" aria-modal="true" aria-label="Share project">
+<div id="shareModal" class="modal-overlay modal-top" style="display:none" onclick="if(event.target===this)closeShareModal()" role="dialog" aria-modal="true" aria-label="Share project">
   <div class="modal-box">
     <div class="modal-hd">
       <span class="modal-title" id="shareTitle">Share project</span>
