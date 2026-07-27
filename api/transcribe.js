@@ -38,6 +38,12 @@ export default async function handler(req, res) {
     });
 
     const data = await r.json();
+    if (r.ok) {
+      // Scribe reports word-level timings; the last one is the audio length.
+      const words = data?.words || [];
+      const seconds = words.length ? (words[words.length - 1].end || 0) : 0;
+      await logUsage(req, user, { kind: 'transcribe', model: model_id, units: seconds, project: req.body?.project });
+    }
     res.status(r.status).json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });

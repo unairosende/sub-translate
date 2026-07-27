@@ -518,6 +518,22 @@ input[type=file]{display:none}
 <div id="mainApp" class="app" style="display:none">
 
 <!-- ══════════════════════════════════════════════
+     USAGE MODAL
+══════════════════════════════════════════════ -->
+<div id="usageModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUsageModal()" role="dialog" aria-modal="true" aria-label="Usage">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">Usage</span>
+      <button class="modal-close" onclick="closeUsageModal()" aria-label="Close usage">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="gl-hint">What your account has sent to the AI providers. Costs are only shown if a price list is configured on the server; the unit counts are always exact.</div>
+      <div id="usageList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
      SHARE MODAL
 ══════════════════════════════════════════════ -->
 <div id="shareModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeShareModal()" role="dialog" aria-modal="true" aria-label="Share project">
@@ -584,7 +600,8 @@ input[type=file]{display:none}
       <input id="projSearch" class="proj-search" placeholder="Search projects…" oninput="renderProjectList()" spellcheck="false">
       <div id="projectsList"></div>
     </div>
-    <div class="modal-ft" style="padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end">
+    <div class="modal-ft" style="padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between">
+      <button class="btn" onclick="openUsageModal()">Usage</button>
       <button class="btn btn-primary" onclick="newProject()">New project</button>
     </div>
   </div>
@@ -1156,6 +1173,7 @@ async function transcribeAudio(audioBlob, filename, { language, onStatus } = {})
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       fileUrl,
+      project: currentProjectId || '',
       model_id: settings.elModel || 'scribe_v1',
       ...(language && language !== 'auto' ? { language_code: language } : {}),
     }),
@@ -2258,7 +2276,7 @@ async function callProvider(prompt,_key,retries=3) {
   for(let attempt=0;attempt<retries;attempt++){
     try{
       const resp=await fetch('/api/translate',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
-        body:JSON.stringify({prompt,model,provider:activeProvider})});
+        body:JSON.stringify({prompt,model,provider:activeProvider,project:currentProjectId||''})});
       const data=await resp.json();
       if(data.error){const e=new Error(data.error);e.is429=data.is429||resp.status===429;throw e;}
       return data.text||'[]';
@@ -3378,6 +3396,62 @@ function rememberProject(id, updated) {
     s.projectUpdated = updated || null;
     localStorage.setItem(SAVE_KEY, JSON.stringify(s));
   } catch {}
+}
+
+// ── Usage ───────────────────────────────────────────────────
+function closeUsageModal() { $('usageModal').style.display = 'none'; }
+
+async function openUsageModal() {
+  $('usageModal').style.display = 'flex';
+  const list = $('usageList');
+  list.textContent = 'Loading…';
+  try {
+    const events = await pb.collection('usage_events').getFullList({ sort: '-created' });
+    renderUsage(events);
+  } catch (e) {
+    list.innerHTML = '';
+    list.appendChild(projEmpty('Could not load usage: ' + (e?.message || 'unknown error')));
+  }
+}
+
+function renderUsage(events) {
+  const list = $('usageList');
+  list.innerHTML = '';
+  if (!events.length) { list.appendChild(projEmpty('Nothing recorded yet.')); return; }
+
+  // Group by month so the list stays readable as events pile up.
+  const months = {};
+  events.forEach(e => {
+    const key = (e.created || '').slice(0, 7);          // YYYY-MM
+    const m = months[key] || (months[key] = { chars: 0, seconds: 0, cost: 0, calls: 0 });
+    if (e.kind === 'translate') m.chars += e.units || 0;
+    if (e.kind === 'transcribe') m.seconds += e.units || 0;
+    m.cost += e.cost || 0;
+    m.calls++;
+  });
+
+  Object.keys(months).sort().reverse().forEach(key => {
+    const m = months[key];
+    const row = document.createElement('div');
+    row.className = 'proj-row';
+    row.style.cursor = 'default';
+
+    const info = document.createElement('div');
+    info.className = 'proj-info';
+    const title = document.createElement('div');
+    title.className = 'proj-name';
+    title.textContent = new Date(key + '-01T00:00:00Z').toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+    const meta = document.createElement('div');
+    meta.className = 'proj-meta';
+    const bits = [`${m.calls} call${m.calls === 1 ? '' : 's'}`];
+    if (m.chars) bits.push(`${m.chars.toLocaleString()} chars translated`);
+    if (m.seconds) bits.push(`${Math.round(m.seconds / 60)} min transcribed`);
+    if (m.cost) bits.push(`$${m.cost.toFixed(2)}`);
+    meta.textContent = bits.join(' · ');
+    info.append(title, meta);
+    row.appendChild(info);
+    list.appendChild(row);
+  });
 }
 
 // ── Sharing ─────────────────────────────────────────────────
