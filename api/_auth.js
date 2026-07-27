@@ -1,24 +1,35 @@
 const PB_URL = process.env.PB_URL || 'https://api.captio.studio';
 
 // Price list in USD, set through the PRICES env var as JSON, e.g.
-//   {"gemini-2.5-flash":{"perMTok":0.3},"scribe_v1":{"perMinute":0.4}}
+//   {"gemini-3.5-flash":{"inPerMTok":1.5,"outPerMTok":9},
+//    "scribe_v1":{"perHour":0.22}}
 // Deliberately empty by default: recording a made-up cost is worse than
 // recording none, and the unit counts stay exact either way.
 let PRICES = {};
 try { PRICES = JSON.parse(process.env.PRICES || '{}'); } catch { /* keep empty */ }
 
-function estimateCost(kind, model, units) {
+// Output tokens cost several times more than input on every current Gemini
+// model, so both directions are priced separately.
+// ponytail: ~4 characters per token is a rough conversion — good enough to
+// track spend, not a substitute for the provider's invoice.
+function estimateCost(kind, model, units, unitsOut) {
   const p = PRICES[model];
   if (!p) return 0;
-  // units: characters for translation, seconds of audio for transcription.
-  if (kind === 'translate' && p.perMTok) return (units / 4) / 1e6 * p.perMTok;  // ~4 chars per token
-  if (kind === 'transcribe' && p.perMinute) return (units / 60) * p.perMinute;
+  if (kind === 'translate') {
+    const inCost  = p.inPerMTok  ? (units / 4) / 1e6 * p.inPerMTok      : 0;
+    const outCost = p.outPerMTok ? ((unitsOut || 0) / 4) / 1e6 * p.outPerMTok : 0;
+    return inCost + outCost;
+  }
+  if (kind === 'transcribe') {
+    if (p.perHour)   return (units / 3600) * p.perHour;   // units are seconds
+    if (p.perMinute) return (units / 60) * p.perMinute;
+  }
   return 0;
 }
 
 // Records what an operation consumed. Never throws: a failed log must not cost
 // the user the work they just paid for.
-export async function logUsage(req, user, { kind, model, units, project }) {
+export async function logUsage(req, user, { kind, model, units, unitsOut, project }) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   try {
     await fetch(`${PB_URL}/api/collections/usage_events/records`, {
@@ -29,7 +40,8 @@ export async function logUsage(req, user, { kind, model, units, project }) {
         kind,
         model: model || '',
         units: Math.round(units || 0),
-        cost: estimateCost(kind, model, units || 0),
+        units_out: Math.round(unitsOut || 0),
+        cost: estimateCost(kind, model, units || 0, unitsOut || 0),
         project: project || '',
       }),
     });

@@ -3423,8 +3423,8 @@ function renderUsage(events) {
   const months = {};
   events.forEach(e => {
     const key = (e.created || '').slice(0, 7);          // YYYY-MM
-    const m = months[key] || (months[key] = { chars: 0, seconds: 0, cost: 0, calls: 0 });
-    if (e.kind === 'translate') m.chars += e.units || 0;
+    const m = months[key] || (months[key] = { chars: 0, charsOut: 0, seconds: 0, cost: 0, calls: 0 });
+    if (e.kind === 'translate') { m.chars += e.units || 0; m.charsOut += e.units_out || 0; }
     if (e.kind === 'transcribe') m.seconds += e.units || 0;
     m.cost += e.cost || 0;
     m.calls++;
@@ -3444,7 +3444,7 @@ function renderUsage(events) {
     const meta = document.createElement('div');
     meta.className = 'proj-meta';
     const bits = [`${m.calls} call${m.calls === 1 ? '' : 's'}`];
-    if (m.chars) bits.push(`${m.chars.toLocaleString()} chars translated`);
+    if (m.chars) bits.push(`${m.chars.toLocaleString()} chars in / ${m.charsOut.toLocaleString()} out`);
     if (m.seconds) bits.push(`${Math.round(m.seconds / 60)} min transcribed`);
     if (m.cost) bits.push(`$${m.cost.toFixed(2)}`);
     meta.textContent = bits.join(' · ');
