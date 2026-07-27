@@ -188,6 +188,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 /* ── Top progress bar ── */
 .top-progress{height:3px;flex-shrink:0;overflow:hidden;opacity:0;transition:opacity .2s}
 .top-progress.active{opacity:1}
+.role-chip{display:inline-flex;align-items:center;margin-left:8px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.role-chip.readonly{border-color:var(--warn);color:var(--warn-ink)}
 .conflict-banner{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:var(--z-modal);display:flex;align-items:center;gap:10px;padding:8px 12px 8px 16px;background:var(--panel);border:1px solid var(--err);border-radius:10px;font:500 12.5px var(--sans);color:var(--ink);box-shadow:0 6px 24px rgba(22,20,15,.18)}
 .progress-label{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:var(--z-modal);display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;font:500 12px var(--sans);color:var(--ink-2);box-shadow:0 4px 18px rgba(22,20,15,.14);white-space:nowrap}
 .top-progress-fill{height:100%;background:var(--accent);transition:width .5s ease;width:0%;box-shadow:2px 0 8px oklch(0.66 0.16 28 / 0.5)}
@@ -514,6 +516,31 @@ input[type=file]{display:none}
 </div>
 
 <div id="mainApp" class="app" style="display:none">
+
+<!-- ══════════════════════════════════════════════
+     SHARE MODAL
+══════════════════════════════════════════════ -->
+<div id="shareModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeShareModal()" role="dialog" aria-modal="true" aria-label="Share project">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title" id="shareTitle">Share project</span>
+      <button class="modal-close" onclick="closeShareModal()" aria-label="Close share">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="gl-row">
+        <input id="shareEmail" class="gl-input" placeholder="colleague@keweke.com" spellcheck="false"
+               onkeydown="if(event.key==='Enter')addMember()">
+        <select id="shareRole" class="exp-sel" style="flex:0 0 auto">
+          <option value="editor">Editor</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button class="btn" onclick="addMember()">Add</button>
+      </div>
+      <div id="shareError" class="auth-error" style="display:none;margin-bottom:10px"></div>
+      <div id="shareList"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════
      CONFLICT BANNER
@@ -971,6 +998,7 @@ input[type=file]{display:none}
       <div class="project-meta-line" id="projectMeta">
         <span class="project-saved-dot" id="savedDot"></span>
         <span id="projectMetaText">No subtitles loaded</span>
+        <span class="role-chip" id="roleChip" style="display:none"></span>
       </div>
     </div>
     <button class="btn" onclick="openProjectsModal()" title="Open projects">Projects</button>
@@ -3213,6 +3241,29 @@ function glossaryRules() {
 // ══════════════════════════════════════════════════════════════
 let currentProjectId = null;
 let currentProjectUpdated = null;   // server timestamp of the version we loaded
+let currentProjectRole = 'owner';   // 'owner' | 'editor' | 'viewer'
+
+// An unknown or missing role falls back to viewer: read-only is the safe guess.
+// Note this is a UI restriction — the collection rule lets any member write, so
+// it discourages accidents rather than enforcing anything. A backend hook would
+// be needed to make it binding.
+async function resolveProjectRole(rec) {
+  if (rec.owner === userId()) return 'owner';
+  try {
+    const m = await pb.collection('project_members').getFirstListItem(
+      pb.filter('project = {:p} && user = {:u}', { p: rec.id, u: userId() }));
+    return m.role || 'viewer';
+  } catch { return 'viewer'; }
+}
+
+function applyRoleRestrictions() {
+  const chip = $('roleChip');
+  if (!chip) return;
+  if (currentProjectRole === 'owner') { chip.style.display = 'none'; return; }
+  chip.textContent = currentProjectRole === 'viewer' ? 'Read-only' : 'Shared · editor';
+  chip.className = 'role-chip' + (currentProjectRole === 'viewer' ? ' readonly' : '');
+  chip.style.display = 'inline-flex';
+}
 let projectsCache = [];
 let cloudSaveTimer = null, cloudSaveInFlight = false, cloudSavePending = false;
 
@@ -3265,6 +3316,7 @@ function setSyncStatus(state, detail) {
 // cloud save in there covers the whole app instead of ~15 call sites.
 function scheduleCloudSave() {
   if (!pb.authStore.isValid || !subtitles.length) return;
+  if (currentProjectRole === 'viewer') return;   // read-only share
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(saveProjectToCloud, 2000);
 }
@@ -3328,6 +3380,106 @@ function rememberProject(id, updated) {
   } catch {}
 }
 
+// ── Sharing ─────────────────────────────────────────────────
+let shareProjectRec = null;
+
+function openShareModal(p) {
+  shareProjectRec = p;
+  $('shareTitle').textContent = `Share “${p.name || 'Untitled project'}”`;
+  $('shareError').style.display = 'none';
+  $('shareEmail').value = '';
+  $('shareModal').style.display = 'flex';
+  renderShareList();
+}
+function closeShareModal() { $('shareModal').style.display = 'none'; }
+
+function shareError(msg) {
+  const err = $('shareError');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+async function renderShareList() {
+  const list = $('shareList');
+  list.textContent = 'Loading…';
+  try {
+    const members = await pb.collection('project_members').getFullList({
+      filter: pb.filter('project = {:id}', { id: shareProjectRec.id }),
+      expand: 'user',
+      sort: 'created',
+    });
+    list.innerHTML = '';
+    if (!members.length) { list.appendChild(projEmpty('Not shared with anyone yet.')); return; }
+    members.forEach(m => list.appendChild(memberRow(m)));
+  } catch (e) {
+    list.innerHTML = '';
+    list.appendChild(projEmpty('Could not load members: ' + (e?.message || 'unknown error')));
+  }
+}
+
+function memberRow(m) {
+  const row = document.createElement('div');
+  row.className = 'proj-row';
+
+  const info = document.createElement('div');
+  info.className = 'proj-info';
+  const name = document.createElement('div');
+  name.className = 'proj-name';
+  name.textContent = m.expand?.user?.email || '(unknown account)';
+  info.appendChild(name);
+
+  const sel = document.createElement('select');
+  sel.className = 'exp-sel';
+  sel.style.flex = '0 0 auto';
+  [['editor', 'Editor'], ['viewer', 'Viewer']].forEach(([v, label]) => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    // An empty role is treated as viewer — the safer of the two.
+    o.selected = (m.role || 'viewer') === v;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => changeMemberRole(m.id, sel.value);
+
+  const actions = document.createElement('div');
+  actions.className = 'proj-actions';
+  actions.append(sel, projBtn('Remove', () => removeMember(m), true));
+
+  row.append(info, actions);
+  return row;
+}
+
+async function addMember() {
+  const email = ($('shareEmail').value || '').trim().toLowerCase();
+  if (!email) return;
+  $('shareError').style.display = 'none';
+  try {
+    // pb.filter escapes the value — never interpolate user input into a filter.
+    const user = await pb.collection('users').getFirstListItem(pb.filter('email = {:email}', { email }));
+    if (user.id === userId()) return shareError('That is your own account — you already own this project.');
+    await pb.collection('project_members').create({
+      project: shareProjectRec.id,
+      user: user.id,
+      role: $('shareRole').value,
+    });
+    $('shareEmail').value = '';
+    renderShareList();
+  } catch (e) {
+    shareError(e?.status === 404
+      ? 'No account with that email yet. They need to sign in once before you can share with them.'
+      : (e?.message || 'Could not share the project'));
+  }
+}
+
+async function changeMemberRole(id, role) {
+  try { await pb.collection('project_members').update(id, { role }); }
+  catch (e) { shareError(e?.message || 'Could not change the role'); }
+}
+
+async function removeMember(m) {
+  try { await pb.collection('project_members').delete(m.id); renderShareList(); }
+  catch (e) { shareError(e?.message || 'Could not remove that person'); }
+}
+
 async function openProjectsModal() {
   $('projectsModal').style.display = 'flex';
   const list = $('projectsList');
@@ -3382,11 +3534,18 @@ function projectRow(p) {
 
   const actions = document.createElement('div');
   actions.className = 'proj-actions';
-  actions.append(
-    projBtn('Rename', () => renameProject(p)),
-    projBtn('Duplicate', () => duplicateProject(p)),
-    projBtn('Delete', () => deleteProject(p), true),
-  );
+  if (p.owner === userId()) {
+    actions.append(
+      projBtn('Share', () => openShareModal(p)),
+      projBtn('Rename', () => renameProject(p)),
+      projBtn('Duplicate', () => duplicateProject(p)),
+      projBtn('Delete', () => deleteProject(p), true),
+    );
+  } else {
+    // Shared with us: renaming, sharing and deleting stay with the owner.
+    meta.textContent += ' · shared with you';
+    actions.append(projBtn('Duplicate', () => duplicateProject(p)));
+  }
 
   row.append(info, actions);
   return row;
@@ -3405,7 +3564,10 @@ async function openProject(id) {
   clearTimeout(cloudSaveTimer);
   if (currentProjectId && subtitles.length) await saveProjectToCloud();
   try {
-    applyProjectRecord(await pb.collection('projects').getOne(id));
+    const rec = await pb.collection('projects').getOne(id);
+    currentProjectRole = await resolveProjectRole(rec);
+    applyProjectRecord(rec);
+    applyRoleRestrictions();
     closeProjectsModal();
   } catch (e) {
     setStatus('Could not open project: ' + (e?.message || ''), 'err');
@@ -3441,6 +3603,8 @@ async function newProject() {
   if (currentProjectId && subtitles.length) await saveProjectToCloud();
   currentProjectId = null;
   currentProjectUpdated = null;
+  currentProjectRole = 'owner';
+  applyRoleRestrictions();
   hideConflictBanner();
   rememberProject(null, null);
   subtitles = []; translations = {}; backTranslations = {}; glossary = [];
