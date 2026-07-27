@@ -339,6 +339,15 @@ input[type=file]{display:none}
 .gl-input{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--ink);font:400 12.5px var(--sans)}
 .gl-arrow{color:var(--ink-3);font-size:12px;flex-shrink:0}
 .gl-hint{font-size:11.5px;color:var(--ink-3);margin-bottom:12px;line-height:1.5}
+/* ── Comments ── */
+.cmt{padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px}
+.cmt.resolved{opacity:.55}
+.cmt-hd{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.cmt-author{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmt-text{font-size:12.5px;color:var(--ink);line-height:1.45;white-space:pre-wrap}
+.cmt-badge{border:1px solid var(--line);background:var(--panel);border-radius:6px;font-family:var(--mono);font-size:10.5px;padding:2px 6px;cursor:pointer;color:var(--ink-3)}
+.cmt-badge:hover{background:var(--line-2)}
+.cmt-badge.has{border-color:var(--accent-ink);color:var(--accent-ink)}
 .modal-body::-webkit-scrollbar{width:4px}
 .modal-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
 .modal-ft{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
@@ -516,6 +525,25 @@ input[type=file]{display:none}
 </div>
 
 <div id="mainApp" class="app" style="display:none">
+
+<!-- ══════════════════════════════════════════════
+     COMMENTS MODAL
+══════════════════════════════════════════════ -->
+<div id="commentsModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeComments()" role="dialog" aria-modal="true" aria-label="Comments">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title" id="commentsTitle">Comments</span>
+      <button class="modal-close" onclick="closeComments()" aria-label="Close comments">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="commentsList"></div>
+    </div>
+    <div class="modal-ft" style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:6px">
+      <input id="commentText" class="gl-input" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')addComment()">
+      <button class="btn btn-primary" onclick="addComment()">Send</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════
      USAGE MODAL
@@ -2058,6 +2086,11 @@ function makeCard(sub,editable,lang) {
   if(issues.length) card.title=issues.map(i=>(i.level==='error'?'✕ ':'⚠ ')+i.msg).join('\n');
   card.dataset.idx=sub.index; card.dataset.lang=lang;
   const safeText = sub.text || '';
+  const open = commentsFor(sub.index).filter(c=>!c.resolved).length;
+  const total = commentsFor(sub.index).length;
+  const cmtBtnHtml = currentProjectId
+    ? `<button class="cmt-badge${total?' has':''}" onclick="event.stopPropagation();openComments(${sub.index})" title="${total?`${total} comment${total>1?'s':''}, ${open} open`:'Add a comment'}">💬${total?' '+total:''}</button>`
+    : '';
   const splitBtnHtml = lang==='source'
     ? `<button class="split-btn" onclick="event.stopPropagation();splitSubtitle(${sub.index})" title="Split into two cues">⌥ Split</button>`+
       `<button class="split-btn del-btn" onclick="event.stopPropagation();deleteSubtitle(${sub.index})" title="Delete this subtitle">✕</button>`
@@ -2069,7 +2102,7 @@ function makeCard(sub,editable,lang) {
     `<div class="sub-text">${escHtml(safeText)}</div>`+
     `<div class="sub-meta"><span class="sub-chars ${cst==='ok'?'':cst}">${longest}/${maxLen()}</span>`+
     `<span class="sub-cps ${cpsLevel==='ok'?'':cpsLevel}">${cps===null?'—':cps.toFixed(1)} cps</span>`+
-    `<div class="char-bar"><div class="char-bar-fill ${cst==='ok'?'':cst}" style="width:${pct}%"></div></div>${splitBtnHtml}</div>`;
+    `<div class="char-bar"><div class="char-bar-fill ${cst==='ok'?'':cst}" style="width:${pct}%"></div></div>${cmtBtnHtml}${splitBtnHtml}</div>`;
   if(editable) card.addEventListener('click',()=>openEdit(card,sub,lang));
 
   if(lang!=='source'&&backTranslations[lang]) {
@@ -3398,6 +3431,94 @@ function rememberProject(id, updated) {
   } catch {}
 }
 
+// ── Comments ────────────────────────────────────────────────
+let projectComments = [];   // every comment on the open project
+let commentCue = null;      // cue index the modal is showing
+
+async function loadComments() {
+  if (!currentProjectId || !pb.authStore.isValid) { projectComments = []; return; }
+  try {
+    projectComments = await pb.collection('comments').getFullList({
+      filter: pb.filter('project = {:p}', { p: currentProjectId }),
+      expand: 'author',
+      sort: 'created',
+    });
+  } catch { projectComments = []; }   // an unshared project simply has none
+}
+
+function commentsFor(cue) { return projectComments.filter(c => c.cue === cue); }
+
+function openComments(cue) {
+  commentCue = cue;
+  $('commentsTitle').textContent = `Comments on cue #${cue}`;
+  $('commentText').value = '';
+  $('commentsModal').style.display = 'flex';
+  renderComments();
+  $('commentText').focus();
+}
+function closeComments() {
+  $('commentsModal').style.display = 'none';
+  renderCurrentView();          // refresh the badges
+}
+
+function renderComments() {
+  const list = $('commentsList');
+  list.innerHTML = '';
+  const items = commentsFor(commentCue);
+  if (!items.length) { list.appendChild(projEmpty('No comments on this cue yet.')); return; }
+
+  items.forEach(c => {
+    const box = document.createElement('div');
+    box.className = 'cmt' + (c.resolved ? ' resolved' : '');
+
+    const hd = document.createElement('div');
+    hd.className = 'cmt-hd';
+    const who = document.createElement('span');
+    who.className = 'cmt-author';
+    who.textContent = `${c.expand?.author?.email || 'unknown'} · ${new Date(c.created).toLocaleString()}`;
+    hd.appendChild(who);
+    hd.appendChild(projBtn(c.resolved ? 'Reopen' : 'Resolve', () => toggleResolved(c)));
+    if (c.author === userId()) hd.appendChild(projBtn('✕', () => deleteComment(c), true));
+
+    const text = document.createElement('div');
+    text.className = 'cmt-text';
+    text.textContent = c.text;      // user input — never innerHTML
+
+    box.append(hd, text);
+    list.appendChild(box);
+  });
+}
+
+async function addComment() {
+  const text = ($('commentText').value || '').trim();
+  if (!text) return;
+  if (!currentProjectId) { setStatus('Save the project before commenting','err'); return; }
+  try {
+    const rec = await pb.collection('comments').create(
+      { project: currentProjectId, author: userId(), cue: commentCue, text, resolved: false },
+      { expand: 'author' });
+    projectComments.push(rec);
+    $('commentText').value = '';
+    renderComments();
+  } catch (e) { setStatus('Could not post comment: ' + (e?.message || ''), 'err'); }
+}
+
+async function toggleResolved(c) {
+  try {
+    const rec = await pb.collection('comments').update(c.id, { resolved: !c.resolved }, { expand: 'author' });
+    Object.assign(c, rec);
+    renderComments();
+  } catch (e) { setStatus('Could not update comment: ' + (e?.message || ''), 'err'); }
+}
+
+async function deleteComment(c) {
+  try {
+    await pb.collection('comments').delete(c.id);
+    projectComments = projectComments.filter(x => x.id !== c.id);
+    renderComments();
+  } catch (e) { setStatus('Could not delete comment: ' + (e?.message || ''), 'err'); }
+}
+
 // ── Usage ───────────────────────────────────────────────────
 function closeUsageModal() { $('usageModal').style.display = 'none'; }
 
@@ -3642,6 +3763,8 @@ async function openProject(id) {
     currentProjectRole = await resolveProjectRole(rec);
     applyProjectRecord(rec);
     applyRoleRestrictions();
+    await loadComments();
+    renderCurrentView();
     closeProjectsModal();
   } catch (e) {
     setStatus('Could not open project: ' + (e?.message || ''), 'err');
@@ -3681,7 +3804,7 @@ async function newProject() {
   applyRoleRestrictions();
   hideConflictBanner();
   rememberProject(null, null);
-  subtitles = []; translations = {}; backTranslations = {}; glossary = [];
+  subtitles = []; translations = {}; backTranslations = {}; glossary = []; projectComments = [];
   activeTab = 'source';
   if ($('projectName')) $('projectName').value = 'Untitled project';
   if ($('customPromptInstructions')) $('customPromptInstructions').value = '';
