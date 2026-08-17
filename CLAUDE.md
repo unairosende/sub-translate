@@ -2,9 +2,10 @@
 
 ## Project snapshot
 
-Single-file browser app: `index.html` (~3100 lines, HTML + CSS + JS).
+Single-file browser app: `index.html` (~4400 lines, HTML + CSS + JS).
 Serverless API: `api/translate.js` (Vercel, calls Gemini/Groq/OpenRouter/Mistral).
 Stack: vanilla JS, no bundler, no framework. Deployed on Vercel.
+Accounts and usage live in PocketBase at `PB_URL` (defaults to `api.captio.studio`).
 
 ---
 
@@ -58,12 +59,20 @@ Do edits directly with the Edit tool. Pass GateGuard facts before each Edit call
 ## File structure
 
 ```
-index.html          — entire frontend (HTML + CSS + JS, ~3100 lines)
+index.html          — entire frontend (HTML + CSS + JS, ~4400 lines)
 api/translate.js    — Vercel serverless: Gemini/Groq/OpenRouter/Mistral
 api/transcribe.js   — ElevenLabs Scribe transcription
-api/align.js        — ElevenLabs alignment
-vercel.json         — Vercel config
+api/models.js       — lists available model names; monitor-key bypass for health checks
+api/_auth.js        — PocketBase session check and usage/cost accounting (shared, not a route)
 ```
+
+There is **no alignment endpoint**. This section used to list `api/align.js`, and
+it has never existed — `index.html` has no caller for it either. That one line
+cost a day of planning a port of a feature that was never built, so: this
+listing is the four files above, and nothing else.
+
+There is no `vercel.json` either. The deployment is configured in the Vercel
+dashboard, not in the repo.
 
 ## Key globals (index.html JS)
 
